@@ -229,7 +229,7 @@ func (c *Client) UploadWithContext(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, decodeHttpError(resp)
 	}
 

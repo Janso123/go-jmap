@@ -1,10 +1,12 @@
 package jmap_test
 
 import (
+	"context"
 	"fmt"
 
 	"git.sr.ht/~rockorager/go-jmap"
 	"git.sr.ht/~rockorager/go-jmap/core/push"
+	"git.sr.ht/~rockorager/go-jmap/core/push/websocket"
 	"git.sr.ht/~rockorager/go-jmap/mail"
 	"git.sr.ht/~rockorager/go-jmap/mail/email"
 	"git.sr.ht/~rockorager/go-jmap/mail/mailbox"
@@ -107,4 +109,37 @@ func Example_eventsource() {
 		// error occurs if the stream couldn't connect. Listen will
 		// return when stream.Close is called
 	}
+}
+
+// Example usage of a JMAP-over-WebSocket connection (RFC 8887).
+func Example_websocket() {
+	client := &jmap.Client{
+		SessionEndpoint: "https://api.fastmail.com/jmap/session",
+	}
+	client.WithAccessToken("my-access-token")
+	if err := client.Authenticate(); err != nil {
+		// handle
+	}
+
+	ctx := context.Background()
+	conn, err := websocket.Dial(ctx, client)
+	if err != nil {
+		// handle — e.g. fall back to EventSource
+	}
+	defer conn.Close()
+
+	conn.SetHandler(func(change *jmap.StateChange) {
+		// handle push
+	})
+	_ = conn.EnablePush(nil, "") // all data types
+
+	req := &jmap.Request{}
+	req.Invoke(&mailbox.Get{
+		Account: client.Session.PrimaryAccounts[mail.URI],
+	})
+	resp, err := conn.Do(ctx, req)
+	if err != nil {
+		// handle
+	}
+	_ = resp
 }

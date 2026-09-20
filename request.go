@@ -38,15 +38,20 @@ func (r *Request) Invoke(m Method) string {
 }
 
 func mergeURIs(target []URI, opts []URI) []URI {
-	m := make(map[URI]bool)
+	seen := make(map[URI]bool, len(target)+len(opts))
+	uris := make([]URI, 0, len(target)+len(opts))
 	for _, k := range target {
-		m[k] = true
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		uris = append(uris, k)
 	}
 	for _, k := range opts {
-		m[k] = true
-	}
-	uris := []URI{}
-	for k := range m {
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
 		uris = append(uris, k)
 	}
 	return uris

@@ -28,7 +28,7 @@ type MDN struct {
 
 	IncludeOriginalmessage bool `json:"includeOriginalMessage,omitempty"`
 
-	ReportingUA string `json:"reportinUA,omitempty"`
+	ReportingUA string `json:"reportingUA,omitempty"`
 
 	Disposition *Disposition `json:"disposition,omitempty"`
 

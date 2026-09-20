@@ -1,8 +1,9 @@
 module git.sr.ht/~rockorager/go-jmap
 
-go 1.19
+go 1.23
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/oauth2 v0.4.0
 )

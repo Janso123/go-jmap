@@ -34,8 +34,5 @@ func TestMergeURIs(t *testing.T) {
 	opts := []URI{"one", "four"}
 
 	res := mergeURIs(target, opts)
-	assert.Equal(4, len(res))
-	for _, exp := range []URI{"one", "two", "three", "four"} {
-		assert.Contains(res, exp)
-	}
+	assert.Equal([]URI{"one", "two", "three", "four"}, res)
 }

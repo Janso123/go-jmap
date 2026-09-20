@@ -1,0 +1,23 @@
+package blob
+
+import "git.sr.ht/~rockorager/go-jmap"
+
+// URI is the JMAP Blob Management capability (RFC 9404).
+const URI jmap.URI = "urn:ietf:params:jmap:blob"
+
+func init() {
+	jmap.RegisterCapability(&AccountCapability{})
+}
+
+// AccountCapability describes blob management limits advertised by an account.
+// The same type is also used for the empty session capability object.
+type AccountCapability struct {
+	MaxSizeBlobSet            *uint64  `json:"maxSizeBlobSet,omitempty"`
+	MaxDataSources            uint64   `json:"maxDataSources,omitempty"`
+	SupportedTypeNames        []string `json:"supportedTypeNames,omitempty"`
+	SupportedDigestAlgorithms []string `json:"supportedDigestAlgorithms,omitempty"`
+}
+
+func (c *AccountCapability) URI() jmap.URI { return URI }
+
+func (c *AccountCapability) New() jmap.Capability { return &AccountCapability{} }
