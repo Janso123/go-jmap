@@ -20,3 +20,26 @@ func TestVacationFromDateUTC(t *testing.T) {
 	require.Contains(t, string(b), "Z")
 	require.NotContains(t, string(b), "+02:00")
 }
+
+func TestVacationIsEnabledFalse(t *testing.T) {
+	t.Parallel()
+	v := vacationresponse.VacationResponse{IsEnabled: jmap.Bool(false)}
+	b, err := jsonv2.Marshal(v)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"isEnabled":false}`, string(b))
+}
+
+func TestVacationResponseMethodsRegistered(t *testing.T) {
+	t.Parallel()
+	raw := []byte(`{"sessionState":"s","methodResponses":[
+		["VacationResponse/get",{"list":[],"notFound":[]},"0"],
+		["VacationResponse/set",{"updated":{}},"1"]
+	]}`)
+	var resp jmap.Response
+	require.NoError(t, jsonv2.Unmarshal(raw, &resp))
+	require.Len(t, resp.Responses, 2)
+	_, ok := resp.Responses[0].Args.(*vacationresponse.GetResponse)
+	require.True(t, ok)
+	_, ok = resp.Responses[1].Args.(*vacationresponse.SetResponse)
+	require.True(t, ok)
+}

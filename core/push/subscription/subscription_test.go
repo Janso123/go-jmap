@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	jsonv2 "encoding/json/v2"
+
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/core/push/subscription"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +29,7 @@ func TestPushSubscriptionJSONRoundTrip(t *testing.T) {
 			Auth:   "tBH...",
 		},
 		VerificationCode: "abc123",
-		Expires:          &expires,
+		Expires:          jmap.UTCDatePtr(expires),
 		Types:            []string{"Email", "Mailbox"},
 	}
 
@@ -51,7 +53,7 @@ func TestPushSubscriptionJSONRoundTrip(t *testing.T) {
 	require.Equal(t, sub.Keys.Public, got.Keys.Public)
 	require.Equal(t, sub.Keys.Auth, got.Keys.Auth)
 	require.Equal(t, sub.VerificationCode, got.VerificationCode)
-	require.Equal(t, expires.UTC(), got.Expires.UTC())
+	require.Equal(t, jmap.UTCDate(expires), *got.Expires)
 	require.Equal(t, sub.Types, got.Types)
 }
 
@@ -90,4 +92,15 @@ func TestPushSubscriptionSetResponseRegistered(t *testing.T) {
 	require.Len(t, resp.Responses, 1)
 	_, ok := resp.Responses[0].Args.(*subscription.SetResponse)
 	require.True(t, ok)
+}
+
+func TestPushSubscriptionExpiresNonUTCMarshalsZ(t *testing.T) {
+	t.Parallel()
+	loc := time.FixedZone("CEST", 2*3600)
+	expires := time.Date(2026, 12, 1, 16, 30, 0, 0, loc) // 14:30Z
+	sub := subscription.PushSubscription{ID: "ps1", Expires: jmap.UTCDatePtr(expires)}
+	data, err := jsonv2.Marshal(sub)
+	require.NoError(t, err)
+	require.Contains(t, string(data), "2026-12-01T14:30:00Z")
+	require.NotContains(t, string(data), "+02:00")
 }

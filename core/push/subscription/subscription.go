@@ -1,8 +1,6 @@
 package subscription
 
 import (
-	"time"
-
 	"github.com/Janso123/go-jmap"
 )
 
@@ -24,7 +22,7 @@ type PushSubscription struct {
 
 	VerificationCode string `json:"verificationCode,omitempty"`
 
-	Expires *time.Time `json:"expires,omitempty"`
+	Expires *jmap.UTCDate `json:"expires,omitzero"`
 
 	Types []string `json:"types,omitempty"`
 }
