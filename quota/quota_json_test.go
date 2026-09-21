@@ -28,8 +28,18 @@ func TestQuotaJSONRoundTrip(t *testing.T) {
 	require.Equal(t, "q1", string(q.ID))
 	require.Equal(t, uint64(10), q.Used)
 	require.Equal(t, uint64(100), q.HardLimit)
+	require.Equal(t, uint64(80), *q.WarnLimit)
+	require.Equal(t, uint64(90), *q.SoftLimit)
 
 	out, err := jsonv2.Marshal(&q)
 	require.NoError(t, err)
 	require.JSONEq(t, raw, string(out))
+}
+
+func TestQuotaNullLimits(t *testing.T) {
+	t.Parallel()
+	var q quota.Quota
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"id":"q","warnLimit":null,"softLimit":null}`), &q))
+	require.Nil(t, q.WarnLimit)
+	require.Nil(t, q.SoftLimit)
 }

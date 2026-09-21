@@ -60,7 +60,7 @@ type Email struct {
 
 	Subject string `json:"subject,omitzero"`
 
-	SentAt *jmap.UTCDate `json:"sentAt,omitzero"`
+	SentAt *jmap.Date `json:"sentAt,omitzero"`
 
 	BodyStructure *BodyPart `json:"bodyStructure,omitzero"`
 
@@ -134,7 +134,7 @@ type BodyPart struct {
 }
 
 type BodyValue struct {
-	Value string `json:"value,omitzero"`
+	Value string `json:"value"`
 
 	IsEncodingProblem bool `json:"isEncodingProblem,omitzero"`
 

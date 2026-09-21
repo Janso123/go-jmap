@@ -19,7 +19,7 @@ func TestBlobMethodsRemainManual(t *testing.T) {
 	require.Equal(t, []jmap.URI{blob.URI}, (&blob.Get{}).Requires())
 	require.Equal(t, []jmap.URI{blob.URI}, (&blob.Upload{}).Requires())
 	require.Equal(t, []jmap.URI{blob.URI}, (&blob.Lookup{}).Requires())
-	require.Nil(t, (&blob.Copy{}).Requires())
+	require.Equal(t, []jmap.URI{jmap.CoreURI}, (&blob.Copy{}).Requires())
 }
 
 func TestBlobCapabilityURIUnchanged(t *testing.T) {

@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/Janso123/go-jmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSortMarshal(t *testing.T) {
 	query := &Query{
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{Property: "used"},
 		},
 	}

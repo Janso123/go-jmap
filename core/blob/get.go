@@ -10,14 +10,14 @@ import (
 // Get binary blob data and metadata.
 // https://www.rfc-editor.org/rfc/rfc9404.html#section-4.2
 type Get struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	IDs []jmap.ID `json:"ids,omitempty"`
+	IDs []jmap.ID `json:"ids,omitzero"`
 
-	Properties []string `json:"properties,omitempty"`
+	Properties []string `json:"properties,omitzero"`
 
-	Offset *uint64 `json:"offset,omitempty"`
-	Length *uint64 `json:"length,omitempty"`
+	Offset *uint64 `json:"offset,omitzero"`
+	Length *uint64 `json:"length,omitzero"`
 }
 
 func (m *Get) Name() string { return "Blob/get" }
@@ -25,23 +25,23 @@ func (m *Get) Name() string { return "Blob/get" }
 func (m *Get) Requires() []jmap.URI { return []jmap.URI{URI} }
 
 type GetResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	List []*GetResult `json:"list,omitempty"`
+	List []*GetResult `json:"list,omitzero"`
 
-	NotFound []jmap.ID `json:"notFound,omitempty"`
+	NotFound []jmap.ID `json:"notFound,omitzero"`
 }
 
 type GetResult struct {
-	ID jmap.ID `json:"id,omitempty"`
+	ID jmap.ID `json:"id,omitzero"`
 
-	DataAsText   *string `json:"data:asText,omitempty"`
-	DataAsBase64 *string `json:"data:asBase64,omitempty"`
+	DataAsText   *string `json:"data:asText,omitzero"`
+	DataAsBase64 *string `json:"data:asBase64,omitzero"`
 
-	IsEncodingProblem bool `json:"isEncodingProblem,omitempty"`
-	IsTruncated       bool `json:"isTruncated,omitempty"`
+	IsEncodingProblem bool `json:"isEncodingProblem,omitzero"`
+	IsTruncated       bool `json:"isTruncated,omitzero"`
 
-	Size uint64 `json:"size,omitempty"`
+	Size uint64 `json:"size,omitzero"`
 
 	Digests map[string]string `json:"-"`
 }

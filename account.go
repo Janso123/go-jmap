@@ -34,17 +34,24 @@ func (a *Account) UnmarshalJSON(data []byte) error {
 	}
 
 	a.Capabilities = make(map[URI]Capability)
-	for key, cap := range capabilities {
+	var decodeErr error
+	rangeCapabilities(func(key URI, cap Capability) {
+		if decodeErr != nil {
+			return
+		}
 		rawCap, ok := raw.RawCapabilities[key]
 		if !ok {
-			continue
+			return
 		}
 		newCap := cap.New()
-		err := json.Unmarshal(rawCap, newCap)
-		if err != nil {
-			return err
+		if err := json.Unmarshal(rawCap, newCap); err != nil {
+			decodeErr = err
+			return
 		}
 		a.Capabilities[key] = newCap
+	})
+	if decodeErr != nil {
+		return decodeErr
 	}
 
 	return nil

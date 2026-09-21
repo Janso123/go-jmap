@@ -26,14 +26,14 @@ func init() {
 // The same type is used for both the session capability object and the
 // per-account capability object defined in RFC 9661 Section 1.2.1.
 type Capability struct {
-	Implementation      string   `json:"implementation,omitempty"`
-	MaxSizeScriptName   uint64   `json:"maxSizeScriptName,omitempty"`
-	MaxSizeScript       *uint64  `json:"maxSizeScript,omitempty"`
-	MaxNumberScripts    *uint64  `json:"maxNumberScripts,omitempty"`
-	MaxNumberRedirects  *uint64  `json:"maxNumberRedirects,omitempty"`
-	SieveExtensions     []string `json:"sieveExtensions,omitempty"`
-	NotificationMethods []string `json:"notificationMethods,omitempty"`
-	ExternalLists       []string `json:"externalLists,omitempty"`
+	Implementation      string   `json:"implementation,omitzero"`
+	MaxSizeScriptName   uint64   `json:"maxSizeScriptName,omitzero"`
+	MaxSizeScript       *uint64  `json:"maxSizeScript,omitzero"`
+	MaxNumberScripts    *uint64  `json:"maxNumberScripts,omitzero"`
+	MaxNumberRedirects  *uint64  `json:"maxNumberRedirects,omitzero"`
+	SieveExtensions     []string `json:"sieveExtensions,omitzero"`
+	NotificationMethods []string `json:"notificationMethods,omitzero"`
+	ExternalLists       []string `json:"externalLists,omitzero"`
 }
 
 func (c *Capability) URI() jmap.URI { return URI }

@@ -58,7 +58,7 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 	assert.Empty(t, sessionCalendars.MaxDateTime)
 	assert.Empty(t, sessionCalendars.MaxExpandedQueryDuration)
 	assert.Nil(t, sessionCalendars.MaxParticipantsPerEvent)
-	assert.False(t, sessionCalendars.MayCreateCalendar)
+	assert.Nil(t, sessionCalendars.MayCreateCalendar)
 
 	_, ok = session.Capabilities[calendar.ParseURI].(*calendar.ParseCapability)
 	require.True(t, ok)
@@ -76,7 +76,8 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 	assert.Equal(t, jscalendar.Duration("P365D"), accountCalendars.MaxExpandedQueryDuration)
 	require.NotNil(t, accountCalendars.MaxParticipantsPerEvent)
 	assert.Equal(t, uint64(250), *accountCalendars.MaxParticipantsPerEvent)
-	assert.True(t, accountCalendars.MayCreateCalendar)
+	require.NotNil(t, accountCalendars.MayCreateCalendar)
+	assert.True(t, *accountCalendars.MayCreateCalendar)
 
 	_, ok = session.Accounts["u1"].Capabilities[calendar.ParseURI].(*calendar.ParseCapability)
 	require.True(t, ok)

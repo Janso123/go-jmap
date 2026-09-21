@@ -15,7 +15,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	id := req.Invoke(&QueryChanges{
 		Account:         "u1",
 		Filter:          &FilterCondition{ResourceType: "octets"},
-		Sort:            []*SortComparator{{Property: "used"}},
+		Sort:            []*jmap.Comparator{{Property: "used"}},
 		SinceQueryState: "s1",
 		MaxChanges:      50,
 	})

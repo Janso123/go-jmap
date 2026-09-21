@@ -46,9 +46,9 @@ type Quota struct {
 
 	Types []string `json:"types,omitzero"`
 
-	WarnLimit uint64 `json:"warnLimit,omitzero"`
+	WarnLimit *uint64 `json:"warnLimit,omitzero"`
 
-	SoftLimit uint64 `json:"softLimit,omitzero"`
+	SoftLimit *uint64 `json:"softLimit,omitzero"`
 
 	Description string `json:"description,omitzero"`
 }

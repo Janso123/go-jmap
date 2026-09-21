@@ -5,6 +5,7 @@ import (
 
 	jsonv2 "encoding/json/v2"
 
+	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/mail/email"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +21,7 @@ func TestEmailSortComparatorsWire(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, `{"property":"hasKeyword","keyword":"$seen","isAscending":true}`, string(b))
 
-	q := &email.Query{Sort: []*email.SortComparator{email.ByKeyword(email.KeywordFlagged, false)}}
+	q := &email.Query{Sort: []*jmap.Comparator{email.ByKeyword(email.KeywordFlagged, false)}}
 	b, err = jsonv2.Marshal(q)
 	require.NoError(t, err)
 	require.Contains(t, string(b), `"sort"`)

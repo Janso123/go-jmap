@@ -8,20 +8,17 @@ import (
 
 // Option configures a Client created by NewClient.
 //
-// Option order matters: WithBearer and WithBasic replace HttpClient entirely.
-// Apply auth before WithTimeout / WithTrustedHosts so those mutate the auth
-// client. WithHTTPClient after WithBearer/WithBasic overwrites auth; WithBearer
-// / WithBasic after WithHTTPClient discards the custom client. Prefer either a
-// pre-authenticated *http.Client via WithHTTPClient alone, or auth first then
-// timeout/hosts.
+// WithBearer and WithBasic preserve Timeout, CheckRedirect, and Jar on the
+// current HttpClient. WithHTTPClient after auth replaces the entire client
+// (including auth transport). WithBearer/WithBasic after WithHTTPClient wrap
+// the custom client's transport. Option order no longer drops Timeout.
 type Option func(*Client)
 
 // NewClient creates a Client for the given session URL with optional
 // configuration. The default User-Agent is "go-jmap/" + Version.
 //
-// Options are applied in order. WithBearer and WithBasic replace HttpClient;
-// see Option for composition rules (auth before timeout/trusted hosts; do not
-// interleave WithHTTPClient with auth unless intentional).
+// Options are applied in order. Auth options preserve existing HttpClient
+// settings; see Option for WithHTTPClient interaction.
 func NewClient(sessionURL string, opts ...Option) *Client {
 	c := &Client{
 		SessionEndpoint: sessionURL,
@@ -34,21 +31,20 @@ func NewClient(sessionURL string, opts ...Option) *Client {
 }
 
 // WithHTTPClient sets the HTTP client used for requests.
-// Applied after WithBearer/WithBasic replaces the auth client; applied before
-// them is discarded when auth runs. Prefer a client that already carries auth,
-// or use WithBearer/WithBasic without a prior WithHTTPClient.
+// WithBearer/WithBasic wrap the current Transport for auth; Timeout,
+// CheckRedirect, and Jar on that client are preserved. WithHTTPClient after
+// auth replaces the entire HttpClient (including the auth transport).
+// WithBearer/WithBasic after WithHTTPClient wrap the custom client's transport.
 func WithHTTPClient(h *http.Client) Option {
 	return func(c *Client) { c.HttpClient = h }
 }
 
 // WithBearer configures bearer token authentication via WithAccessToken.
-// Replaces HttpClient; apply before WithTimeout / WithTrustedHosts.
 func WithBearer(token string) Option {
 	return func(c *Client) { c.WithAccessToken(token) }
 }
 
 // WithBasic configures HTTP basic authentication via WithBasicAuth.
-// Replaces HttpClient; apply before WithTimeout / WithTrustedHosts.
 func WithBasic(user, pass string) Option {
 	return func(c *Client) { c.WithBasicAuth(user, pass) }
 }

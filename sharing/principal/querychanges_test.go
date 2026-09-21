@@ -15,7 +15,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	id := req.Invoke(&QueryChanges{
 		Account:         "u1",
 		Filter:          &FilterCondition{Email: "jane@example.com"},
-		Sort:            []*SortComparator{{Property: "email"}},
+		Sort:            []*jmap.Comparator{{Property: "email"}},
 		SinceQueryState: "s1",
 		MaxChanges:      50,
 	})

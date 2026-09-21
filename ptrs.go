@@ -17,3 +17,12 @@ func UTCDatePtr(t time.Time) *UTCDate {
 	d := UTCDate(t)
 	return &d
 }
+
+// DatePtr returns a pointer to a Date for optional RFC 8620 Date fields.
+func DatePtr(t time.Time) *Date {
+	d := Date(t)
+	return &d
+}
+
+// Uint64Ptr returns a pointer to n for optional UnsignedInt JSON fields.
+func Uint64Ptr(n uint64) *uint64 { return new(n) }

@@ -7,18 +7,10 @@ import "github.com/Janso123/go-jmap"
 type Query struct {
 	jmap.Query[SieveScript]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 }
 
 // QueryResponse is the result of SieveScript/query.
 type QueryResponse = jmap.QueryResponse
-
-type SortComparator struct {
-	Property string `json:"property,omitempty"`
-
-	IsAscending bool `json:"isAscending"`
-
-	Collation jmap.CollationAlgo `json:"collation,omitempty"`
-}

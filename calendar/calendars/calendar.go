@@ -29,9 +29,9 @@ type Calendar struct {
 
 	SortOrder uint64 `json:"sortOrder,omitzero"`
 
-	IsSubscribed bool `json:"isSubscribed,omitzero"`
+	IsSubscribed *bool `json:"isSubscribed,omitzero"`
 
-	IsVisible bool `json:"isVisible,omitzero"`
+	IsVisible *bool `json:"isVisible,omitzero"`
 
 	IsDefault bool `json:"isDefault,omitzero"`
 

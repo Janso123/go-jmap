@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Janso123/go-jmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,13 +21,10 @@ func TestFilterConditionMarshal(t *testing.T) {
 }
 
 func TestFilterOperatorMarshal(t *testing.T) {
-	data, err := json.Marshal(&FilterOperator{
-		Operator: jmap.OperatorAND,
-		Conditions: []Filter{
-			&FilterCondition{Name: "vacation"},
-			&FilterCondition{IsActive: new(true)},
-		},
-	})
+	data, err := json.Marshal(And(
+		&FilterCondition{Name: "vacation"},
+		&FilterCondition{IsActive: new(true)},
+	))
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"operator":"AND","conditions":[{"name":"vacation"},{"isActive":true}]}`,

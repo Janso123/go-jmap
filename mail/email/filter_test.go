@@ -33,7 +33,7 @@ func TestFilterConstructorsWire(t *testing.T) {
 
 	tests := []struct {
 		name string
-		f    Filter
+		f    jmap.Filter
 		want string
 	}{
 		{"hasKeyword", HasKeyword(KeywordSeen), `{"hasKeyword":"$seen"}`},
@@ -68,9 +68,9 @@ func TestFilterAndOperatorWire(t *testing.T) {
 func TestEmailSMIMEFilterMarshal(t *testing.T) {
 	t.Parallel()
 	f := &FilterCondition{
-		HasSMIME:                   true,
-		HasVerifiedSMIME:           true,
-		HasVerifiedSMIMEAtDelivery: true,
+		HasSMIME:                   jmap.Bool(true),
+		HasVerifiedSMIME:           jmap.Bool(true),
+		HasVerifiedSMIMEAtDelivery: jmap.Bool(true),
 	}
 	b, err := jsonv2.Marshal(f)
 	require.NoError(t, err)
@@ -79,4 +79,14 @@ func TestEmailSMIMEFilterMarshal(t *testing.T) {
 		"hasVerifiedSmime":true,
 		"hasVerifiedSmimeAtDelivery":true
 	}`, string(b))
+}
+
+func TestFilterHasAttachmentFalseOnWire(t *testing.T) {
+	t.Parallel()
+	b, err := jsonv2.Marshal(WithoutAttachment())
+	require.NoError(t, err)
+	require.JSONEq(t, `{"hasAttachment":false}`, string(b))
+	b, err = jsonv2.Marshal(&FilterCondition{HasSMIME: jmap.Bool(false)})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"hasSmime":false}`, string(b))
 }

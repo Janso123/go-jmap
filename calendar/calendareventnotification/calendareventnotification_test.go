@@ -23,14 +23,14 @@ func TestCalendarEventNotificationMarshal(t *testing.T) {
 
 	data, err := json.Marshal(&CalendarEventNotification{
 		ID:      "cn1",
-		Created: &created,
+		Created: jmap.UTCDatePtr(created),
 		ChangedBy: &Person{
 			Name:            "Jane Doe",
 			Email:           &email,
 			PrincipalID:     &principalID,
 			CalendarAddress: &calendarAddress,
-			Comment:         &comment,
 		},
+		Comment:         &comment,
 		Type:            TypeUpdated,
 		CalendarEventID: "ev1",
 		IsDraft:         new(true),
@@ -51,9 +51,9 @@ func TestCalendarEventNotificationMarshal(t *testing.T) {
 			"name":"Jane Doe",
 			"email":"jane@example.com",
 			"principalId":"p1",
-			"calendarAddress":"mailto:jane@example.com",
-			"comment":"Rescheduled due to travel"
+			"calendarAddress":"mailto:jane@example.com"
 		},
+		"comment":"Rescheduled due to travel",
 		"type":"updated",
 		"calendarEventId":"ev1",
 		"isDraft":true,

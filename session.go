@@ -49,17 +49,24 @@ func (s *Session) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 
 	s.Capabilities = make(map[URI]Capability)
-	for key, cap := range capabilities {
+	var decodeErr error
+	rangeCapabilities(func(key URI, cap Capability) {
+		if decodeErr != nil {
+			return
+		}
 		rawCap, ok := raw.RawCapabilities[key]
 		if !ok {
-			continue
+			return
 		}
 		newCap := cap.New()
-		err := jsonv2.Unmarshal(rawCap, newCap)
-		if err != nil {
-			return err
+		if err := jsonv2.Unmarshal(rawCap, newCap); err != nil {
+			decodeErr = err
+			return
 		}
 		s.Capabilities[key] = newCap
+	})
+	if decodeErr != nil {
+		return decodeErr
 	}
 
 	return nil

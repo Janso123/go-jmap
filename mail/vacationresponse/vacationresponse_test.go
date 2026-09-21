@@ -43,3 +43,12 @@ func TestVacationResponseMethodsRegistered(t *testing.T) {
 	_, ok = resp.Responses[1].Args.(*vacationresponse.SetResponse)
 	require.True(t, ok)
 }
+
+func TestVacationEmptySubjectOnWire(t *testing.T) {
+	t.Parallel()
+	empty := ""
+	v := vacationresponse.VacationResponse{Subject: &empty}
+	b, err := jsonv2.Marshal(v)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"subject":""}`, string(b))
+}

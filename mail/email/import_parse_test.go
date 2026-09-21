@@ -6,7 +6,6 @@ import (
 	jsonv2 "encoding/json/v2"
 
 	"github.com/Janso123/go-jmap"
-	_ "github.com/Janso123/go-jmap/mail/email"
 	"github.com/Janso123/go-jmap/mail/email"
 	"github.com/stretchr/testify/require"
 )

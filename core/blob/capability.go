@@ -12,10 +12,10 @@ func init() {
 // AccountCapability describes blob management limits advertised by an account.
 // The same type is also used for the empty session capability object.
 type AccountCapability struct {
-	MaxSizeBlobSet            *uint64  `json:"maxSizeBlobSet,omitempty"`
-	MaxDataSources            uint64   `json:"maxDataSources,omitempty"`
-	SupportedTypeNames        []string `json:"supportedTypeNames,omitempty"`
-	SupportedDigestAlgorithms []string `json:"supportedDigestAlgorithms,omitempty"`
+	MaxSizeBlobSet            *uint64  `json:"maxSizeBlobSet,omitzero"`
+	MaxDataSources            uint64   `json:"maxDataSources,omitzero"`
+	SupportedTypeNames        []string `json:"supportedTypeNames,omitzero"`
+	SupportedDigestAlgorithms []string `json:"supportedDigestAlgorithms,omitzero"`
 }
 
 func (c *AccountCapability) URI() jmap.URI { return URI }

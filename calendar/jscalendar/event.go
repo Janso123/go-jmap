@@ -1,6 +1,10 @@
 package jscalendar
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+)
 
 type UTCDateTime string
 type LocalDateTime string
@@ -8,151 +12,171 @@ type Duration string
 type SignedDuration string
 type TimeZoneID string
 
+type FreeBusyStatus string
+
+const (
+	FreeBusyFree            FreeBusyStatus = "free"
+	FreeBusyBusy            FreeBusyStatus = "busy"
+	FreeBusyBusyUnavailable FreeBusyStatus = "busy-unavailable"
+	FreeBusyBusyTentative   FreeBusyStatus = "busy-tentative"
+)
+
+type Privacy string
+
+const (
+	PrivacyPublic  Privacy = "public"
+	PrivacyPrivate Privacy = "private"
+	PrivacySecret  Privacy = "secret"
+)
+
 type PatchObject map[string]any
 
 type Event struct {
-	Type    string `json:"@type,omitempty"`
-	Version string `json:"version,omitempty"`
-	UID     string `json:"uid,omitempty"`
+	Type    string `json:"@type,omitzero"`
+	Version string `json:"version,omitzero"`
+	UID     string `json:"uid,omitzero"`
 
-	RelatedTo map[string]*Relation `json:"relatedTo,omitempty"`
-	ProdID    string               `json:"prodId,omitempty"`
-	Created   UTCDateTime          `json:"created,omitempty"`
-	Updated   UTCDateTime          `json:"updated,omitempty"`
-	Sequence  uint64               `json:"sequence,omitempty"`
-	Method    string               `json:"method,omitempty"`
+	RelatedTo map[string]*Relation `json:"relatedTo,omitzero"`
+	ProdID    string               `json:"prodId,omitzero"`
+	Created   UTCDateTime          `json:"created,omitzero"`
+	Updated   UTCDateTime          `json:"updated,omitzero"`
+	Sequence  uint64               `json:"sequence,omitzero"`
+	Method    string               `json:"method,omitzero"`
 
-	Title                  string                      `json:"title,omitempty"`
-	Description            string                      `json:"description,omitempty"`
-	DescriptionContentType string                      `json:"descriptionContentType,omitempty"`
-	ShowWithoutTime        bool                        `json:"showWithoutTime,omitempty"`
-	Locations              map[string]*Location        `json:"locations,omitempty"`
-	MainLocationID         string                      `json:"mainLocationId,omitempty"`
-	VirtualLocations       map[string]*VirtualLocation `json:"virtualLocations,omitempty"`
-	Links                  map[string]*Link            `json:"links,omitempty"`
-	Locale                 string                      `json:"locale,omitempty"`
-	Keywords               map[string]bool             `json:"keywords,omitempty"`
-	Categories             map[string]bool             `json:"categories,omitempty"`
-	Color                  string                      `json:"color,omitempty"`
+	Title                  string                      `json:"title,omitzero"`
+	Description            string                      `json:"description,omitzero"`
+	DescriptionContentType string                      `json:"descriptionContentType,omitzero"`
+	ShowWithoutTime        bool                        `json:"showWithoutTime,omitzero"`
+	Locations              map[string]*Location        `json:"locations,omitzero"`
+	MainLocationID         string                      `json:"mainLocationId,omitzero"`
+	VirtualLocations       map[string]*VirtualLocation `json:"virtualLocations,omitzero"`
+	Links                  map[string]*Link            `json:"links,omitzero"`
+	Locale                 string                      `json:"locale,omitzero"`
+	Keywords               map[string]bool             `json:"keywords,omitzero"`
+	Categories             map[string]bool             `json:"categories,omitzero"`
+	Color                  string                      `json:"color,omitzero"`
 
-	RecurrenceID         LocalDateTime          `json:"recurrenceId,omitempty"`
-	RecurrenceIDTimeZone TimeZoneID             `json:"recurrenceIdTimeZone,omitempty"`
-	RecurrenceRule       *RecurrenceRule        `json:"recurrenceRule,omitempty"`
-	RecurrenceOverrides  map[string]PatchObject `json:"recurrenceOverrides,omitempty"`
+	RecurrenceID         LocalDateTime          `json:"recurrenceId,omitzero"`
+	RecurrenceIDTimeZone TimeZoneID             `json:"recurrenceIdTimeZone,omitzero"`
+	RecurrenceRule       *RecurrenceRule        `json:"recurrenceRule,omitzero"`
+	RecurrenceOverrides  map[string]PatchObject `json:"recurrenceOverrides,omitzero"`
 
-	OrganizerCalendarAddress string                  `json:"organizerCalendarAddress,omitempty"`
-	SentBy                   string                  `json:"sentBy,omitempty"`
-	Participants             map[string]*Participant `json:"participants,omitempty"`
-	Alerts                   map[string]*Alert       `json:"alerts,omitempty"`
+	OrganizerCalendarAddress string                  `json:"organizerCalendarAddress,omitzero"`
+	SentBy                   string                  `json:"sentBy,omitzero"`
+	Participants             map[string]*Participant `json:"participants,omitzero"`
+	Alerts                   map[string]*Alert       `json:"alerts,omitzero"`
 
-	TimeZone    TimeZoneID    `json:"timeZone,omitempty"`
-	Start       LocalDateTime `json:"start,omitempty"`
-	Duration    Duration      `json:"duration,omitempty"`
-	EndTimeZone TimeZoneID    `json:"endTimeZone,omitempty"`
-	Status      string        `json:"status,omitempty"`
+	TimeZone       TimeZoneID     `json:"timeZone,omitzero"`
+	Start          LocalDateTime  `json:"start,omitzero"`
+	Duration       Duration       `json:"duration,omitzero"`
+	EndTimeZone    TimeZoneID     `json:"endTimeZone,omitzero"`
+	Status         string         `json:"status,omitzero"`
+	Priority       uint64         `json:"priority,omitzero"`
+	FreeBusyStatus FreeBusyStatus `json:"freeBusyStatus,omitzero"`
+	Privacy        Privacy        `json:"privacy,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Relation struct {
-	Type     string          `json:"@type,omitempty"`
-	Relation map[string]bool `json:"relation,omitempty"`
+	Type     string          `json:"@type,omitzero"`
+	Relation map[string]bool `json:"relation,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Link struct {
-	Type        string `json:"@type,omitempty"`
-	Href        string `json:"href,omitempty"`
-	ContentType string `json:"contentType,omitempty"`
-	Size        uint64 `json:"size,omitempty"`
-	Rel         string `json:"rel,omitempty"`
-	Title       string `json:"title,omitempty"`
-	CID         string `json:"cid,omitempty"`
-	Display     string `json:"display,omitempty"`
+	Type        string          `json:"@type,omitzero"`
+	Href        string          `json:"href,omitzero"`
+	ContentType string          `json:"contentType,omitzero"`
+	Size        uint64          `json:"size,omitzero"`
+	Rel         string          `json:"rel,omitzero"`
+	Title       string          `json:"title,omitzero"`
+	CID         string          `json:"cid,omitzero"`
+	Display     map[string]bool `json:"display,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Location struct {
-	Type          string           `json:"@type,omitempty"`
-	Name          string           `json:"name,omitempty"`
-	LocationTypes map[string]bool  `json:"locationTypes,omitempty"`
-	Coordinates   string           `json:"coordinates,omitempty"`
-	Links         map[string]*Link `json:"links,omitempty"`
+	Type          string           `json:"@type,omitzero"`
+	Name          string           `json:"name,omitzero"`
+	LocationTypes map[string]bool  `json:"locationTypes,omitzero"`
+	Coordinates   string           `json:"coordinates,omitzero"`
+	Links         map[string]*Link `json:"links,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type VirtualLocation struct {
-	Type     string          `json:"@type,omitempty"`
-	Name     string          `json:"name,omitempty"`
-	URI      string          `json:"uri,omitempty"`
-	Features map[string]bool `json:"features,omitempty"`
+	Type     string          `json:"@type,omitzero"`
+	Name     string          `json:"name,omitzero"`
+	URI      string          `json:"uri,omitzero"`
+	Features map[string]bool `json:"features,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type NDay struct {
-	Type        string `json:"@type,omitempty"`
-	Day         string `json:"day,omitempty"`
-	NthOfPeriod int64  `json:"nthOfPeriod,omitempty"`
+	Type        string `json:"@type,omitzero"`
+	Day         string `json:"day,omitzero"`
+	NthOfPeriod int64  `json:"nthOfPeriod,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type RecurrenceRule struct {
-	Type           string        `json:"@type,omitempty"`
-	Frequency      string        `json:"frequency,omitempty"`
-	Interval       uint64        `json:"interval,omitempty"`
-	RScale         string        `json:"rscale,omitempty"`
-	Skip           string        `json:"skip,omitempty"`
-	FirstDayOfWeek string        `json:"firstDayOfWeek,omitempty"`
-	ByDay          []*NDay       `json:"byDay,omitempty"`
-	ByMonthDay     []int64       `json:"byMonthDay,omitempty"`
-	ByMonth        []string      `json:"byMonth,omitempty"`
-	ByYearDay      []int64       `json:"byYearDay,omitempty"`
-	ByWeekNo       []int64       `json:"byWeekNo,omitempty"`
-	ByHour         []uint64      `json:"byHour,omitempty"`
-	ByMinute       []uint64      `json:"byMinute,omitempty"`
-	BySecond       []uint64      `json:"bySecond,omitempty"`
-	BySetPosition  []int64       `json:"bySetPosition,omitempty"`
-	Count          uint64        `json:"count,omitempty"`
-	Until          LocalDateTime `json:"until,omitempty"`
+	Type           string        `json:"@type,omitzero"`
+	Frequency      string        `json:"frequency,omitzero"`
+	Interval       uint64        `json:"interval,omitzero"`
+	RScale         string        `json:"rscale,omitzero"`
+	Skip           string        `json:"skip,omitzero"`
+	FirstDayOfWeek string        `json:"firstDayOfWeek,omitzero"`
+	ByDay          []*NDay       `json:"byDay,omitzero"`
+	ByMonthDay     []int64       `json:"byMonthDay,omitzero"`
+	ByMonth        []string      `json:"byMonth,omitzero"`
+	ByYearDay      []int64       `json:"byYearDay,omitzero"`
+	ByWeekNo       []int64       `json:"byWeekNo,omitzero"`
+	ByHour         []uint64      `json:"byHour,omitzero"`
+	ByMinute       []uint64      `json:"byMinute,omitzero"`
+	BySecond       []uint64      `json:"bySecond,omitzero"`
+	BySetPosition  []int64       `json:"bySetPosition,omitzero"`
+	Count          uint64        `json:"count,omitzero"`
+	Until          LocalDateTime `json:"until,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Participant struct {
-	Type                   string           `json:"@type,omitempty"`
-	Name                   string           `json:"name,omitempty"`
-	Email                  string           `json:"email,omitempty"`
-	Description            string           `json:"description,omitempty"`
-	DescriptionContentType string           `json:"descriptionContentType,omitempty"`
-	CalendarAddress        string           `json:"calendarAddress,omitempty"`
-	Kind                   string           `json:"kind,omitempty"`
-	Roles                  map[string]bool  `json:"roles,omitempty"`
-	ParticipationStatus    string           `json:"participationStatus,omitempty"`
-	ExpectReply            bool             `json:"expectReply,omitempty"`
-	SentBy                 string           `json:"sentBy,omitempty"`
-	DelegatedTo            map[string]bool  `json:"delegatedTo,omitempty"`
-	DelegatedFrom          map[string]bool  `json:"delegatedFrom,omitempty"`
-	MemberOf               map[string]bool  `json:"memberOf,omitempty"`
-	Links                  map[string]*Link `json:"links,omitempty"`
-	Progress               string           `json:"progress,omitempty"`
-	PercentComplete        uint64           `json:"percentComplete,omitempty"`
+	Type                   string           `json:"@type,omitzero"`
+	Name                   string           `json:"name,omitzero"`
+	Email                  string           `json:"email,omitzero"`
+	Description            string           `json:"description,omitzero"`
+	DescriptionContentType string           `json:"descriptionContentType,omitzero"`
+	CalendarAddress        string           `json:"calendarAddress,omitzero"`
+	Kind                   string           `json:"kind,omitzero"`
+	Roles                  map[string]bool  `json:"roles,omitzero"`
+	ParticipationStatus    string           `json:"participationStatus,omitzero"`
+	ExpectReply            bool             `json:"expectReply,omitzero"`
+	SentBy                 string           `json:"sentBy,omitzero"`
+	DelegatedTo            map[string]bool  `json:"delegatedTo,omitzero"`
+	DelegatedFrom          map[string]bool  `json:"delegatedFrom,omitzero"`
+	MemberOf               map[string]bool  `json:"memberOf,omitzero"`
+	Links                  map[string]*Link `json:"links,omitzero"`
+	Progress               string           `json:"progress,omitzero"`
+	PercentComplete        uint64           `json:"percentComplete,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Alert struct {
-	Type         string               `json:"@type,omitempty"`
-	Trigger      *Trigger             `json:"trigger,omitempty"`
-	Acknowledged UTCDateTime          `json:"acknowledged,omitempty"`
-	RelatedTo    map[string]*Relation `json:"relatedTo,omitempty"`
-	Action       string               `json:"action,omitempty"`
+	Type         string               `json:"@type,omitzero"`
+	Trigger      *Trigger             `json:"trigger,omitzero"`
+	Acknowledged UTCDateTime          `json:"acknowledged,omitzero"`
+	RelatedTo    map[string]*Relation `json:"relatedTo,omitzero"`
+	Action       string               `json:"action,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Trigger struct {
@@ -161,17 +185,69 @@ type Trigger struct {
 	Unknown         json.RawMessage
 }
 
-type OffsetTrigger struct {
-	Type       string         `json:"@type,omitempty"`
-	Offset     SignedDuration `json:"offset,omitempty"`
-	RelativeTo string         `json:"relativeTo,omitempty"`
+func (t Trigger) MarshalJSON() ([]byte, error) {
+	switch {
+	case len(t.Unknown) > 0:
+		return t.Unknown, nil
+	case t.AbsoluteTrigger != nil:
+		return jsonv2.Marshal(t.AbsoluteTrigger)
+	case t.OffsetTrigger != nil:
+		return jsonv2.Marshal(t.OffsetTrigger)
+	default:
+		return []byte("null"), nil
+	}
+}
 
-	extensions map[string]json.RawMessage
+func (t *Trigger) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*t = Trigger{}
+		return nil
+	}
+
+	var probe struct {
+		Type string `json:"@type"`
+	}
+	if err := jsonv2.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+
+	switch probe.Type {
+	case "", "OffsetTrigger":
+		var offset OffsetTrigger
+		if err := jsonv2.Unmarshal(data, &offset); err != nil {
+			return err
+		}
+		t.OffsetTrigger = &offset
+		t.AbsoluteTrigger = nil
+		t.Unknown = nil
+	case "AbsoluteTrigger":
+		var absolute AbsoluteTrigger
+		if err := jsonv2.Unmarshal(data, &absolute); err != nil {
+			return err
+		}
+		t.AbsoluteTrigger = &absolute
+		t.OffsetTrigger = nil
+		t.Unknown = nil
+	default:
+		t.Unknown = append(t.Unknown[:0], data...)
+		t.OffsetTrigger = nil
+		t.AbsoluteTrigger = nil
+	}
+
+	return nil
+}
+
+type OffsetTrigger struct {
+	Type       string         `json:"@type,omitzero"`
+	Offset     SignedDuration `json:"offset,omitzero"`
+	RelativeTo string         `json:"relativeTo,omitzero"`
+
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type AbsoluteTrigger struct {
-	Type string      `json:"@type,omitempty"`
-	When UTCDateTime `json:"when,omitempty"`
+	Type string      `json:"@type,omitzero"`
+	When UTCDateTime `json:"when,omitzero"`
 
-	extensions map[string]json.RawMessage
+	Extra map[string]jsontext.Value `json:",embed"`
 }

@@ -7,9 +7,9 @@ import "github.com/Janso123/go-jmap"
 type Query struct {
 	jmap.Query[Mailbox]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 
 	SortAsTree bool `json:"sortAsTree,omitzero"`
 

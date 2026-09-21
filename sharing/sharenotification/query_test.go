@@ -12,7 +12,7 @@ import (
 
 func TestQueryInvoke(t *testing.T) {
 	req := &jmap.Request{}
-	after := time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC)
+	after := jmap.UTCDate(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
 
 	id := req.Invoke(&Query{
 		Account: "u1",
@@ -20,10 +20,10 @@ func TestQueryInvoke(t *testing.T) {
 			After:      &after,
 			ObjectType: "Mailbox",
 		},
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{Property: "created"},
 		},
-		Limit: 10,
+		Limit: jmap.Uint64Ptr(10),
 	})
 	assert.Equal(t, "0", id)
 

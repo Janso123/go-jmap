@@ -38,10 +38,10 @@ func Not(conds ...Filter) *FilterOperator {
 // Comparator describes a sort key for Query methods.
 // IsAscending has no omitzero: RFC default is true, so Desc must emit false.
 type Comparator struct {
-	Property    string `json:"property"`
-	IsAscending bool   `json:"isAscending"`
-	Collation   string `json:"collation,omitzero"`
-	Keyword     string `json:"keyword,omitzero"`
+	Property    string        `json:"property"`
+	IsAscending bool          `json:"isAscending"`
+	Collation   CollationAlgo `json:"collation,omitzero"`
+	Keyword     string        `json:"keyword,omitzero"`
 }
 
 // Asc returns a Comparator sorted ascending on prop.

@@ -127,7 +127,7 @@ func TestDialURLMaxConcurrentRequests(t *testing.T) {
 	for range 2 {
 		go func() {
 			req := &jmap.Request{}
-			req.Invoke(&core.Echo{Hello: "x"})
+			req.Invoke(core.Echo{"hello": "x"})
 			_, err := conn.Do(ctx, req)
 			done <- err
 		}()
@@ -287,7 +287,7 @@ func TestConnAutoReconnect(t *testing.T) {
 	}
 
 	req := &jmap.Request{}
-	req.Invoke(&core.Echo{Hello: "after"})
+	req.Invoke(core.Echo{"hello": "after"})
 	resp, err := conn.Do(context.Background(), req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)

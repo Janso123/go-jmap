@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -94,11 +94,10 @@ type EventSource struct {
 }
 
 func (e *EventSource) httpClient() *http.Client {
-	hc := e.Client.HttpClient
-	if hc == nil {
+	if e.Client == nil {
 		return http.DefaultClient
 	}
-	return hc
+	return e.Client.HTTPClient()
 }
 
 func (e *EventSource) maxEventSize() int {
@@ -110,42 +109,48 @@ func (e *EventSource) maxEventSize() int {
 
 // Connect to the server
 func (e *EventSource) connect(ctx context.Context) error {
-	// Create the URL for the subscription
-	u, err := url.Parse(e.Client.Session.EventSourceURL)
-	if err != nil {
-		return err
+	if e.Client == nil || e.Client.Session == nil {
+		return fmt.Errorf("eventsource: session not loaded")
 	}
-	q := u.Query()
 
 	if len(e.Events) == 0 {
 		e.Events = []jmap.EventType{jmap.AllEvents}
 	}
-	// types field
 	types := []string{}
 	for _, ev := range e.Events {
 		types = append(types, string(ev))
 	}
 	typeStr := strings.Join(types, ",")
-	q.Set("types", typeStr)
-
-	// ping field
-	q.Set("ping", fmt.Sprintf("%d", e.Ping))
-
-	// close after field
 	closeAfter := "no"
 	if e.CloseAfterState {
 		closeAfter = "state"
 	}
-	q.Set("closeafter", closeAfter)
+	ping := fmt.Sprintf("%d", e.Ping)
 
-	// set the query string
-	u.RawQuery = q.Encode()
+	tmpl := e.Client.Session.EventSourceURL
+	expanded := jmap.ExpandURITemplateLevel1(tmpl, map[string]string{
+		"types":      typeStr,
+		"closeafter": closeAfter,
+		"ping":       ping,
+	})
+	u, err := url.Parse(expanded)
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(tmpl, "{types}") {
+		q := u.Query()
+		q.Set("types", typeStr)
+		q.Set("ping", ping)
+		q.Set("closeafter", closeAfter)
+		u.RawQuery = q.Encode()
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("User-Agent", e.Client.EffectiveUserAgent())
 	if e.LastEventID != "" {
 		req.Header.Set("Last-Event-ID", e.LastEventID)
 	}
@@ -360,7 +365,7 @@ func (e *EventSource) readStream(ctx context.Context) error {
 		case "state":
 			if e.Handler != nil && len(data) > 0 {
 				state := &jmap.StateChange{}
-				if err := json.Unmarshal(data, state); err != nil {
+				if err := jsonv2.Unmarshal(data, state); err != nil {
 					return err
 				}
 				e.Handler(state)
@@ -368,7 +373,7 @@ func (e *EventSource) readStream(ctx context.Context) error {
 		case "calendarAlert":
 			if e.OnCalendarAlert != nil && len(data) > 0 {
 				alert := &calendar.CalendarAlert{}
-				if err := json.Unmarshal(data, alert); err != nil {
+				if err := jsonv2.Unmarshal(data, alert); err != nil {
 					return err
 				}
 				e.OnCalendarAlert(alert)

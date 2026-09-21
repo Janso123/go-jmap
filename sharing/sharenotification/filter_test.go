@@ -11,8 +11,8 @@ import (
 )
 
 func TestFilterConditionMarshal(t *testing.T) {
-	after := time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC)
-	before := time.Date(2026, time.October, 1, 0, 0, 0, 0, time.UTC)
+	after := jmap.UTCDate(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
+	before := jmap.UTCDate(time.Date(2026, time.October, 1, 0, 0, 0, 0, time.UTC))
 
 	data, err := json.Marshal(&FilterCondition{
 		After:           &after,
@@ -27,13 +27,10 @@ func TestFilterConditionMarshal(t *testing.T) {
 }
 
 func TestFilterOperatorMarshal(t *testing.T) {
-	data, err := json.Marshal(&FilterOperator{
-		Operator: jmap.OperatorAND,
-		Conditions: []Filter{
-			&FilterCondition{ObjectType: "Mailbox"},
-			&FilterCondition{ObjectAccountID: "a1"},
-		},
-	})
+	data, err := json.Marshal(And(
+		&FilterCondition{ObjectType: "Mailbox"},
+		&FilterCondition{ObjectAccountID: "a1"},
+	))
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"operator":"AND","conditions":[{"objectType":"Mailbox"},{"objectAccountId":"a1"}]}`,

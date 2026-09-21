@@ -17,10 +17,10 @@ func TestQueryInvoke(t *testing.T) {
 		Filter: &FilterCondition{
 			Name: "vacation",
 		},
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{Property: "isActive"},
 		},
-		Limit: 10,
+		Limit: jmap.Uint64Ptr(10),
 	})
 	assert.Equal(t, "0", id)
 

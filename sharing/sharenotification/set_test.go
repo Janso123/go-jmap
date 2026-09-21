@@ -9,14 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSet(t *testing.T) {
+func TestSetDestroyOnly(t *testing.T) {
 	m := &Set{
 		Account: "account-id",
-		Update: map[jmap.ID]jmap.Patch{
-			"notification-id": {
-				"newRights/mayReadItems": true,
-			},
-		},
+		Destroy: []jmap.ID{"notification-id"},
 	}
 	req := &jmap.Request{}
 
@@ -25,7 +21,7 @@ func TestSet(t *testing.T) {
 
 	data, err := json.Marshal(req)
 	assert.NoError(t, err)
-	expected := `{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["ShareNotification/set",{"accountId":"account-id","update":{"notification-id":{"newRights/mayReadItems":true}}},"0"]]}`
+	expected := `{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["ShareNotification/set",{"accountId":"account-id","destroy":["notification-id"]},"0"]]}`
 	assert.Equal(t, expected, string(data))
 
 	t.Run("manual", func(t *testing.T) {

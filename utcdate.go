@@ -6,12 +6,16 @@ import (
 	"time"
 )
 
-// UTCDate is an RFC 8620 UTCDate: always marshaled in UTC with a Z suffix.
+// UTCDate is an RFC 8620 §1.4 UTCDate: RFC 3339 date-time with time-offset Z.
+// time-secfrac is omitted when zero and included when non-zero.
 type UTCDate time.Time
 
 func (d UTCDate) MarshalJSONTo(enc *jsontext.Encoder) error {
 	t := time.Time(d).UTC()
-	return jsonv2.MarshalEncode(enc, t.Format("2006-01-02T15:04:05Z"))
+	if t.Nanosecond() == 0 {
+		return jsonv2.MarshalEncode(enc, t.Format("2006-01-02T15:04:05Z"))
+	}
+	return jsonv2.MarshalEncode(enc, t.Format("2006-01-02T15:04:05.999999999Z"))
 }
 
 func (d *UTCDate) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
@@ -19,7 +23,7 @@ func (d *UTCDate) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err := jsonv2.UnmarshalDecode(dec, &s); err != nil {
 		return err
 	}
-	t, err := time.Parse(time.RFC3339, s)
+	t, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {
 		return err
 	}
@@ -27,12 +31,16 @@ func (d *UTCDate) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	return nil
 }
 
-// Date is a local calendar date per RFC 8620 §1.4; marshal as YYYY-MM-DD.
+// Date is RFC 8620 §1.4 Date: an RFC 3339 date-time with the original
+// time-offset preserved (not forced to Z). time-secfrac is omitted when zero.
 type Date time.Time
 
 func (d Date) MarshalJSONTo(enc *jsontext.Encoder) error {
 	t := time.Time(d)
-	return jsonv2.MarshalEncode(enc, t.Format("2006-01-02"))
+	if t.Nanosecond() == 0 {
+		return jsonv2.MarshalEncode(enc, t.Format("2006-01-02T15:04:05Z07:00"))
+	}
+	return jsonv2.MarshalEncode(enc, t.Format("2006-01-02T15:04:05.999999999Z07:00"))
 }
 
 func (d *Date) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
@@ -40,7 +48,7 @@ func (d *Date) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err := jsonv2.UnmarshalDecode(dec, &s); err != nil {
 		return err
 	}
-	t, err := time.Parse("2006-01-02", s)
+	t, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {
 		return err
 	}

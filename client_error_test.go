@@ -38,3 +38,26 @@ func TestDecodeProblemJSON(t *testing.T) {
 	require.Equal(t, "r1", re.RequestID)
 	require.NotNil(t, re.Limit)
 }
+
+func TestDecodeHTTPErrorKeepsPlainBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(401)
+		io.WriteString(w, "nope")
+	}))
+	defer srv.Close()
+
+	c := &jmap.Client{
+		HttpClient: srv.Client(),
+		Session: &jmap.Session{
+			APIURL:          srv.URL,
+			RawCapabilities: map[jmap.URI]jsontext.Value{jmap.CoreURI: jsontext.Value(`{}`)},
+		},
+	}
+	_, err := c.Do(t.Context(), &jmap.Request{})
+	require.Error(t, err)
+	var he *jmap.HTTPError
+	require.ErrorAs(t, err, &he)
+	require.Equal(t, 401, he.Status)
+	require.Contains(t, he.Body, "nope")
+}

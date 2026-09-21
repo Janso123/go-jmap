@@ -1,7 +1,7 @@
 package jscontact
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,9 +17,9 @@ func TestCardRoundTripMinimal(t *testing.T) {
 	}`
 
 	var card Card
-	require.NoError(t, json.Unmarshal([]byte(input), &card))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &card))
 
-	data, err := json.Marshal(&card)
+	data, err := jsonv2.Marshal(&card)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
 }
@@ -63,9 +63,9 @@ func TestCardRoundTripContactMaps(t *testing.T) {
 	}`
 
 	var card Card
-	require.NoError(t, json.Unmarshal([]byte(input), &card))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &card))
 
-	data, err := json.Marshal(&card)
+	data, err := jsonv2.Marshal(&card)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
 }
@@ -186,9 +186,9 @@ func TestCardRoundTripBroaderProperties(t *testing.T) {
 	}`
 
 	var card Card
-	require.NoError(t, json.Unmarshal([]byte(input), &card))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &card))
 
-	data, err := json.Marshal(&card)
+	data, err := jsonv2.Marshal(&card)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
 }
@@ -206,9 +206,9 @@ func TestCardRoundTripVendorExtensions(t *testing.T) {
 	}`
 
 	var card Card
-	require.NoError(t, json.Unmarshal([]byte(input), &card))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &card))
 
-	data, err := json.Marshal(&card)
+	data, err := jsonv2.Marshal(&card)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
 }
@@ -227,9 +227,25 @@ func TestCardRoundTripGroupMembers(t *testing.T) {
 	}`
 
 	var card Card
-	require.NoError(t, json.Unmarshal([]byte(input), &card))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &card))
 
-	data, err := json.Marshal(&card)
+	data, err := jsonv2.Marshal(&card)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
+}
+
+func TestCardExtraRoundTrip(t *testing.T) {
+	const input = `{"@type":"Card","uid":"urn:uuid:test","foo":1}`
+	var card Card
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &card))
+	require.Equal(t, "urn:uuid:test", card.UID)
+	raw, ok := card.Extra["foo"]
+	require.True(t, ok)
+	require.Equal(t, "1", string(raw))
+	_, hasUID := card.Extra["uid"]
+	require.False(t, hasUID)
+
+	out, err := jsonv2.Marshal(card)
+	require.NoError(t, err)
+	require.JSONEq(t, input, string(out))
 }

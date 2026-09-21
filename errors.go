@@ -40,6 +40,23 @@ func (e *RequestError) Error() string {
 	return e.Type
 }
 
+// HTTPError is returned for non-JSON HTTP failures so callers can inspect Status.
+type HTTPError struct {
+	Status      int
+	StatusText  string
+	Body        string
+	ContentType string
+}
+
+func (e *HTTPError) Error() string {
+	if e.Body == "" {
+		return "HTTP " + e.StatusText
+	}
+	return "HTTP " + e.StatusText + ": " + e.Body
+}
+
+func (e *HTTPError) StatusCode() int { return e.Status }
+
 // MethodErrorType is a method-level error type string (RFC 8620 §3.6.2 + mail).
 // MethodError.Type stays string for extension tolerance; use these for compare.
 type MethodErrorType string
@@ -75,11 +92,11 @@ var ErrStateMismatch = &MethodError{Type: string(MethodErrStateMismatch)}
 // invocation will be in it's place
 type MethodError struct {
 	// The type of error that occurred. Always present
-	Type string `json:"type,omitempty"`
+	Type string `json:"type,omitzero"`
 
 	// Description is available on some method errors (notably,
 	// invalidArguments)
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitzero"`
 }
 
 func (m *MethodError) Error() string {
@@ -125,23 +142,22 @@ const (
 	SetErrForbiddenToSend   SetErrorType = "forbiddenToSend"
 	SetErrCannotUnsend      SetErrorType = "cannotUnsend"
 	SetErrAlreadyExists     SetErrorType = "alreadyExists"
-	SetErrInvalidScript     SetErrorType = "invalidScript"
-	SetErrScriptIsActive    SetErrorType = "scriptIsActive"
+	SetErrInvalidSieve      SetErrorType = "invalidSieve"
+	SetErrSieveIsActive     SetErrorType = "sieveIsActive"
+	SetErrMDNAlreadySent    SetErrorType = "mdnAlreadySent"
+	SetErrUnknownDataType   SetErrorType = "unknownDataType"
 )
 
 // A SetError is returned in set calls for individual record changes
 type SetError struct {
-	// The type of SetError
-	Type string `json:"type,omitempty"`
-
-	// A description of the error to help with debugging that includes an
-	// explanation of what the problem was. This is a non-localised string
-	// and is not intended to be shown directly to end users.
-	Description *string `json:"description,omitempty"`
-
-	// Properties is available on InvalidProperties SetErrors and lists the
-	// individual properties were
-	Properties *[]string `json:"properties,omitempty"`
+	Type              string    `json:"type,omitzero"`
+	Description       *string   `json:"description,omitzero"`
+	Properties        *[]string `json:"properties,omitzero"`
+	ExistingID        ID        `json:"existingId,omitzero"`
+	NotFound          []ID      `json:"notFound,omitzero"`
+	MaxSize           *uint64   `json:"maxSize,omitzero"`
+	MaxRecipients     *uint64   `json:"maxRecipients,omitzero"`
+	InvalidRecipients []string  `json:"invalidRecipients,omitzero"`
 }
 
 func (s *SetError) Error() string {

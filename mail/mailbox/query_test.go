@@ -1,28 +1,27 @@
 package mailbox
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/Janso123/go-jmap"
+	"github.com/stretchr/testify/require"
 )
 
 func TestQuery(t *testing.T) {
-	assert := assert.New(t)
 	query := &Query{
 		Account: "xyz",
 		Filter: &FilterCondition{
 			Name: "Inbox",
 		},
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{
 				Property: "name",
 			},
 		},
-		Limit: 10,
+		Limit: jmap.Uint64Ptr(10),
 	}
-	data, err := json.Marshal(query)
-	assert.NoError(err)
-	expected := `{"accountId":"xyz","limit":10,"filter":{"name":"Inbox"},"sort":[{"property":"name","isAscending":false}]}`
-	assert.Equal(expected, string(data))
+	data, err := jsonv2.Marshal(query)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"accountId":"xyz","limit":10,"filter":{"name":"Inbox"},"sort":[{"property":"name","isAscending":false}]}`, string(data))
 }

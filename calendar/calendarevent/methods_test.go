@@ -2,6 +2,8 @@ package calendarevent
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
+	"strings"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -96,6 +98,29 @@ func TestCalendarEventMarshalDoesNotLeakClearedOverlayFields(t *testing.T) {
 		"start":"2026-03-01T09:00:00",
 		"example.com:colorHint":"violet"
 	}`, string(data))
+}
+
+func TestCalendarEventExtraRoundTrip(t *testing.T) {
+	const input = `{"id":"ev1","calendarIds":{"cal1":true},"uid":"u1","x-unknown":1}`
+	var event CalendarEvent
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &event))
+	require.Equal(t, jmap.ID("ev1"), *event.ID)
+	require.Equal(t, map[jmap.ID]bool{"cal1": true}, *event.CalendarIDs)
+	require.Equal(t, "u1", event.UID)
+	raw, ok := event.Extra["x-unknown"]
+	require.True(t, ok)
+	require.Equal(t, "1", string(raw))
+	_, hasUID := event.Extra["uid"]
+	require.False(t, hasUID)
+	_, hasID := event.Extra["id"]
+	require.False(t, hasID)
+	_, hasCalendars := event.Extra["calendarIds"]
+	require.False(t, hasCalendars)
+
+	out, err := jsonv2.Marshal(event)
+	require.NoError(t, err)
+	require.JSONEq(t, input, string(out))
+	require.False(t, strings.Contains(string(out), `"Extra"`))
 }
 
 func TestGetInvoke(t *testing.T) {
@@ -216,7 +241,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	id := req.Invoke(&QueryChanges{
 		Account:         "u1",
 		Filter:          &FilterCondition{UID: "urn:uuid:ev1"},
-		Sort:            []*SortComparator{{Property: "start", IsAscending: true}},
+		Sort:            []*jmap.Comparator{{Property: "start", IsAscending: true}},
 		SinceQueryState: "q1",
 		MaxChanges:      10,
 	})

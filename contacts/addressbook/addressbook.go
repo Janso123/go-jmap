@@ -28,7 +28,7 @@ type AddressBook struct {
 
 	IsDefault bool `json:"isDefault,omitzero"`
 
-	IsSubscribed bool `json:"isSubscribed,omitzero"`
+	IsSubscribed *bool `json:"isSubscribed,omitzero"`
 
 	ShareWith map[jmap.ID]*Rights `json:"shareWith,omitzero"`
 

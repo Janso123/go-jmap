@@ -1,8 +1,6 @@
 package sharenotification
 
 import (
-	"time"
-
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/sharing"
 )
@@ -39,7 +37,7 @@ type Entity struct {
 type ShareNotification struct {
 	ID jmap.ID `json:"id,omitzero"`
 
-	Created *time.Time `json:"created,omitzero"`
+	Created *jmap.UTCDate `json:"created,omitzero"`
 
 	ChangedBy *Entity `json:"changedBy,omitzero"`
 

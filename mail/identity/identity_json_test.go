@@ -2,8 +2,10 @@ package identity_test
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
+	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/mail"
 	"github.com/Janso123/go-jmap/mail/identity"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +25,7 @@ func TestIdentityJSONRoundTrip(t *testing.T) {
 		},
 		TextSignature: "Regards",
 		HTMLSignature: "<p>Regards</p>",
-		MayDelete:     true,
+		MayDelete:     jmap.Bool(true),
 	}
 
 	data, err := json.Marshal(id)
@@ -49,4 +51,12 @@ func TestIdentityJSONRoundTrip(t *testing.T) {
 	require.Equal(t, id.TextSignature, got.TextSignature)
 	require.Equal(t, id.HTMLSignature, got.HTMLSignature)
 	require.Equal(t, id.MayDelete, got.MayDelete)
+}
+
+func TestIdentityCreateOmitsMayDelete(t *testing.T) {
+	id := identity.Identity{Name: "Me", Email: "me@x"}
+	b, err := jsonv2.Marshal(id)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"name":"Me","email":"me@x"}`, string(b))
+	require.NotContains(t, string(b), "mayDelete")
 }

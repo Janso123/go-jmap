@@ -1,30 +1,40 @@
 package searchsnippet_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap/mail/searchsnippet"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSearchSnippetJSONRoundTrip(t *testing.T) {
+	subj := "Hello <mark>world</mark>"
+	preview := "... <mark>world</mark> ..."
 	s := searchsnippet.SearchSnippet{
 		Email:   "em1",
-		Subject: "Hello <mark>world</mark>",
-		Preview: "... <mark>world</mark> ...",
+		Subject: &subj,
+		Preview: &preview,
 	}
 
-	data, err := json.Marshal(s)
+	data, err := jsonv2.Marshal(s)
 	require.NoError(t, err)
-	assert.JSONEq(t, `{
+	require.JSONEq(t, `{
 		"emailId": "em1",
 		"subject": "Hello <mark>world</mark>",
 		"preview": "... <mark>world</mark> ..."
 	}`, string(data))
 
 	var got searchsnippet.SearchSnippet
-	require.NoError(t, json.Unmarshal(data, &got))
-	require.Equal(t, s, got)
+	require.NoError(t, jsonv2.Unmarshal(data, &got))
+	require.Equal(t, s.Email, got.Email)
+	require.Equal(t, subj, *got.Subject)
+	require.Equal(t, preview, *got.Preview)
+}
+
+func TestSearchSnippetNullSubject(t *testing.T) {
+	var got searchsnippet.SearchSnippet
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"emailId":"e1","subject":null,"preview":null}`), &got))
+	require.Nil(t, got.Subject)
+	require.Nil(t, got.Preview)
 }

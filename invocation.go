@@ -46,7 +46,7 @@ func (i *Invocation) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err := jsonv2.Unmarshal(raw[0], &i.Name); err != nil {
 		return err
 	}
-	newFn, ok := methods[i.Name]
+	newFn, ok := lookupMethod(i.Name)
 	if !ok {
 		i.Args = &UnknownResponse{Name: i.Name, Raw: raw[1]}
 		return jsonv2.Unmarshal(raw[2], &i.CallID)

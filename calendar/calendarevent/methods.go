@@ -56,9 +56,9 @@ type CopyResponse = jmap.CopyResponse[CalendarEvent]
 type QueryChanges struct {
 	jmap.QueryChanges[CalendarEvent]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 }
 
 // QueryChangesResponse is the result of CalendarEvent/queryChanges.

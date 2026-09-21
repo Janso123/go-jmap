@@ -42,9 +42,9 @@ type SetResponse = jmap.SetResponse[CalendarEventNotification]
 type QueryChanges struct {
 	jmap.QueryChanges[CalendarEventNotification]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 }
 
 // QueryChangesResponse is the result of CalendarEventNotification/queryChanges.

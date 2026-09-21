@@ -17,7 +17,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 		Filter: &FilterCondition{
 			ObjectAccountID: "a1",
 		},
-		Sort:            []*SortComparator{{Property: "created"}},
+		Sort:            []*jmap.Comparator{{Property: "created"}},
 		SinceQueryState: "s1",
 		MaxChanges:      50,
 	})

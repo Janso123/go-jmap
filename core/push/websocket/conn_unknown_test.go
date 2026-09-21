@@ -72,7 +72,7 @@ func TestConnDoUnknownMethodInMethodResponses(t *testing.T) {
 	defer conn.Close()
 
 	req := &jmap.Request{}
-	req.Invoke(&core.Echo{Hello: "x"})
+	req.Invoke(core.Echo{"hello": "x"})
 	resp, err := conn.Do(ctx, req)
 	require.NoError(t, err)
 	require.Len(t, resp.Responses, 1)

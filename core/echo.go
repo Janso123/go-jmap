@@ -2,17 +2,14 @@ package core
 
 import "github.com/Janso123/go-jmap"
 
-// The Core/echo method
-type Echo struct {
-	Hello string
-}
+// Echo is Core/echo: an arbitrary JSON object echoed by the server (RFC 8620 §4.1).
+type Echo map[string]any
 
-func (e Echo) Name() string {
-	return "Core/echo"
-}
+func (e Echo) Name() string { return "Core/echo" }
 
-func (e Echo) Requires() []jmap.URI { return nil }
+func (e Echo) Requires() []jmap.URI { return []jmap.URI{jmap.CoreURI} }
 
 func newEcho() jmap.MethodResponse {
-	return &Echo{}
+	e := Echo{}
+	return &e
 }

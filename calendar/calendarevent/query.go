@@ -10,9 +10,9 @@ import (
 type Query struct {
 	jmap.Query[CalendarEvent]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 
 	ExpandRecurrences bool `json:"expandRecurrences,omitzero"`
 
@@ -21,12 +21,3 @@ type Query struct {
 
 // QueryResponse is the result of CalendarEvent/query.
 type QueryResponse = jmap.QueryResponse
-
-type SortComparator struct {
-	Property string `json:"property,omitzero"`
-
-	// IsAscending has no omitzero: RFC default is true, so Desc must emit false.
-	IsAscending bool `json:"isAscending"`
-
-	Collation jmap.CollationAlgo `json:"collation,omitzero"`
-}

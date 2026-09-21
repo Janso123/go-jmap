@@ -16,7 +16,7 @@ func TestAddressBookJSON(t *testing.T) {
 		Description:  "People I know",
 		SortOrder:    10,
 		IsDefault:    true,
-		IsSubscribed: true,
+		IsSubscribed: jmap.Bool(true),
 		ShareWith: map[jmap.ID]*Rights{
 			"principal1": {
 				MayRead:  true,

@@ -2,32 +2,26 @@ package principal
 
 import "github.com/Janso123/go-jmap"
 
-type Filter interface {
-	implementsFilter()
-}
-
-type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
-
-	Conditions []Filter `json:"conditions,omitempty"`
-}
-
-func (fo *FilterOperator) implementsFilter() {}
-
 // Filter criteria for principal queries.
 // https://www.rfc-editor.org/rfc/rfc9670.html#section-2.3
 type FilterCondition struct {
-	AccountIDs []jmap.ID `json:"accountIds,omitempty"`
+	jmap.FilterBase `json:"-"`
 
-	Email string `json:"email,omitempty"`
+	AccountIDs []jmap.ID `json:"accountIds,omitzero"`
 
-	Name string `json:"name,omitempty"`
+	Email string `json:"email,omitzero"`
 
-	Text string `json:"text,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	Type PrincipalType `json:"type,omitempty"`
+	Text string `json:"text,omitzero"`
 
-	CalendarAddress string `json:"calendarAddress,omitempty"`
+	Type PrincipalType `json:"type,omitzero"`
+
+	TimeZone string `json:"timeZone,omitzero"`
+
+	CalendarAddress string `json:"calendarAddress,omitzero"`
 }
 
-func (fc *FilterCondition) implementsFilter() {}
+func And(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.And(conds...) }
+func Or(conds ...jmap.Filter) *jmap.FilterOperator  { return jmap.Or(conds...) }
+func Not(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.Not(conds...) }

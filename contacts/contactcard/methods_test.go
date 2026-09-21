@@ -87,10 +87,10 @@ func TestQueryInvoke(t *testing.T) {
 			InAddressBook: "ab1",
 			NameGiven:     "Ada",
 		},
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{Property: "name/given"},
 		},
-		Limit: 10,
+		Limit: jmap.Uint64Ptr(10),
 	})
 	assert.Equal(t, "0", id)
 
@@ -111,7 +111,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	id := req.Invoke(&QueryChanges{
 		Account:         "u1",
 		Filter:          &FilterCondition{Email: "ada@example.com"},
-		Sort:            []*SortComparator{{Property: "name/surname"}},
+		Sort:            []*jmap.Comparator{{Property: "name/surname"}},
 		SinceQueryState: "q1",
 		MaxChanges:      25,
 	})

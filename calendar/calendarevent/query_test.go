@@ -21,10 +21,10 @@ func TestQueryInvokeWithExpandedRecurrences(t *testing.T) {
 			After:      "2026-01-01T00:00:00",
 			Before:     "2026-02-01T00:00:00",
 		},
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{Property: "start", IsAscending: true},
 		},
-		Limit:             10,
+		Limit:             jmap.Uint64Ptr(10),
 		ExpandRecurrences: true,
 		TimeZone:          jscalendar.TimeZoneID("Europe/Warsaw"),
 	})

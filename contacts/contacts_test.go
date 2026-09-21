@@ -43,11 +43,12 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 	sessionCap, ok := session.Capabilities[contacts.URI].(*contacts.Capability)
 	require.True(t, ok)
 	assert.Nil(t, sessionCap.MaxAddressBooksPerCard)
-	assert.False(t, sessionCap.MayCreateAddressBook)
+	assert.Nil(t, sessionCap.MayCreateAddressBook)
 
 	accountCap, ok := session.Accounts["u1"].Capabilities[contacts.URI].(*contacts.Capability)
 	require.True(t, ok)
 	require.NotNil(t, accountCap.MaxAddressBooksPerCard)
 	assert.Equal(t, uint64(7), *accountCap.MaxAddressBooksPerCard)
-	assert.True(t, accountCap.MayCreateAddressBook)
+	require.NotNil(t, accountCap.MayCreateAddressBook)
+	assert.True(t, *accountCap.MayCreateAddressBook)
 }

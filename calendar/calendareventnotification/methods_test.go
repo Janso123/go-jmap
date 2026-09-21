@@ -54,7 +54,7 @@ func TestSetRequiresCalendarsCapability(t *testing.T) {
 
 func TestQueryInvoke(t *testing.T) {
 	req := &jmap.Request{}
-	after := time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC)
+	after := jmap.UTCDate(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
 
 	id := req.Invoke(&Query{
 		Account: "u1",
@@ -62,10 +62,10 @@ func TestQueryInvoke(t *testing.T) {
 			After: &after,
 			Type:  TypeUpdated,
 		},
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{Property: "created"},
 		},
-		Limit: 10,
+		Limit: jmap.Uint64Ptr(10),
 	})
 	assert.Equal(t, "0", id)
 
@@ -86,7 +86,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	id := req.Invoke(&QueryChanges{
 		Account:         "u1",
 		Filter:          &FilterCondition{Type: TypeCreated},
-		Sort:            []*SortComparator{{Property: "created"}},
+		Sort:            []*jmap.Comparator{{Property: "created"}},
 		SinceQueryState: "q1",
 		MaxChanges:      10,
 	})

@@ -2,27 +2,19 @@ package quota
 
 import "github.com/Janso123/go-jmap"
 
-type Filter interface {
-	implementsFilter()
-}
-
-type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
-
-	Conditions []Filter `json:"conditions,omitempty"`
-}
-
-func (fo *FilterOperator) implementsFilter() {}
-
 // Filter criteria for quota queries.
 type FilterCondition struct {
-	Name string `json:"name,omitempty"`
+	jmap.FilterBase `json:"-"`
 
-	Scope string `json:"scope,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	ResourceType string `json:"resourceType,omitempty"`
+	Scope string `json:"scope,omitzero"`
 
-	Type string `json:"type,omitempty"`
+	ResourceType string `json:"resourceType,omitzero"`
+
+	Type string `json:"type,omitzero"`
 }
 
-func (fc *FilterCondition) implementsFilter() {}
+func And(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.And(conds...) }
+func Or(conds ...jmap.Filter) *jmap.FilterOperator  { return jmap.Or(conds...) }
+func Not(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.Not(conds...) }

@@ -1,88 +1,53 @@
 package contactcard
 
-import (
-	"encoding/json"
-	"time"
-
-	"github.com/Janso123/go-jmap"
-)
-
-type Filter interface {
-	implementsFilter()
-}
-
-type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
-
-	Conditions []Filter `json:"conditions,omitempty"`
-}
-
-func (fo *FilterOperator) implementsFilter() {}
+import "github.com/Janso123/go-jmap"
 
 // FilterCondition defines ContactCard query filters.
 // https://www.rfc-editor.org/rfc/rfc9610.html#section-3.3.1
 type FilterCondition struct {
-	InAddressBook jmap.ID `json:"inAddressBook,omitempty"`
+	jmap.FilterBase `json:"-"`
 
-	UID string `json:"uid,omitempty"`
+	InAddressBook jmap.ID `json:"inAddressBook,omitzero"`
 
-	HasMember string `json:"hasMember,omitempty"`
+	UID string `json:"uid,omitzero"`
 
-	Kind string `json:"kind,omitempty"`
+	HasMember string `json:"hasMember,omitzero"`
 
-	CreatedBefore *time.Time `json:"createdBefore,omitempty"`
+	Kind string `json:"kind,omitzero"`
 
-	CreatedAfter *time.Time `json:"createdAfter,omitempty"`
+	CreatedBefore *jmap.UTCDate `json:"createdBefore,omitzero"`
 
-	UpdatedBefore *time.Time `json:"updatedBefore,omitempty"`
+	CreatedAfter *jmap.UTCDate `json:"createdAfter,omitzero"`
 
-	UpdatedAfter *time.Time `json:"updatedAfter,omitempty"`
+	UpdatedBefore *jmap.UTCDate `json:"updatedBefore,omitzero"`
 
-	Text string `json:"text,omitempty"`
+	UpdatedAfter *jmap.UTCDate `json:"updatedAfter,omitzero"`
 
-	Name string `json:"name,omitempty"`
+	Text string `json:"text,omitzero"`
 
-	NameGiven string `json:"name/given,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	NameSurname string `json:"name/surname,omitempty"`
+	NameGiven string `json:"name/given,omitzero"`
 
-	NameSurname2 string `json:"name/surname2,omitempty"`
+	NameSurname string `json:"name/surname,omitzero"`
 
-	Nickname string `json:"nickname,omitempty"`
+	NameSurname2 string `json:"name/surname2,omitzero"`
 
-	Organization string `json:"organization,omitempty"`
+	Nickname string `json:"nickname,omitzero"`
 
-	Email string `json:"email,omitempty"`
+	Organization string `json:"organization,omitzero"`
 
-	Phone string `json:"phone,omitempty"`
+	Email string `json:"email,omitzero"`
 
-	OnlineService string `json:"onlineService,omitempty"`
+	Phone string `json:"phone,omitzero"`
 
-	Address string `json:"address,omitempty"`
+	OnlineService string `json:"onlineService,omitzero"`
 
-	Note string `json:"note,omitempty"`
+	Address string `json:"address,omitzero"`
+
+	Note string `json:"note,omitzero"`
 }
 
-func (fc *FilterCondition) implementsFilter() {}
-
-func (fc *FilterCondition) MarshalJSON() ([]byte, error) {
-	if fc.CreatedBefore != nil && fc.CreatedBefore.Location() != time.UTC {
-		utc := fc.CreatedBefore.UTC()
-		fc.CreatedBefore = &utc
-	}
-	if fc.CreatedAfter != nil && fc.CreatedAfter.Location() != time.UTC {
-		utc := fc.CreatedAfter.UTC()
-		fc.CreatedAfter = &utc
-	}
-	if fc.UpdatedBefore != nil && fc.UpdatedBefore.Location() != time.UTC {
-		utc := fc.UpdatedBefore.UTC()
-		fc.UpdatedBefore = &utc
-	}
-	if fc.UpdatedAfter != nil && fc.UpdatedAfter.Location() != time.UTC {
-		utc := fc.UpdatedAfter.UTC()
-		fc.UpdatedAfter = &utc
-	}
-
-	type Alias FilterCondition
-	return json.Marshal((*Alias)(fc))
-}
+func And(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.And(conds...) }
+func Or(conds ...jmap.Filter) *jmap.FilterOperator  { return jmap.Or(conds...) }
+func Not(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.Not(conds...) }

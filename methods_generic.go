@@ -59,12 +59,13 @@ type ChangesResponse struct {
 // Query fetches object ids matching filter/sort (RFC 8620 §5.5).
 // Type-specific Filter/Sort fields are added by thin packages via embedding.
 type Query[T Object] struct {
-	Account        ID     `json:"accountId,omitzero"`
-	Position       int64  `json:"position,omitzero"`
-	Anchor         ID     `json:"anchor,omitzero"`
-	AnchorOffset   int64  `json:"anchorOffset,omitzero"`
-	Limit          uint64 `json:"limit,omitzero"`
-	CalculateTotal bool   `json:"calculateTotal,omitzero"`
+	Account         ID               `json:"accountId,omitzero"`
+	Position        int64            `json:"position,omitzero"`
+	Anchor          ID               `json:"anchor,omitzero"`
+	ReferenceAnchor *ResultReference `json:"#anchor,omitzero"`
+	AnchorOffset    int64            `json:"anchorOffset,omitzero"`
+	Limit           *uint64          `json:"limit,omitzero"`
+	CalculateTotal  bool             `json:"calculateTotal,omitzero"`
 }
 
 func (m *Query[T]) Name() string {
@@ -91,11 +92,12 @@ type QueryResponse struct {
 // QueryChanges fetches query result deltas since a query state (RFC 8620 §5.6).
 // Type-specific Filter/Sort fields are added by thin packages via embedding.
 type QueryChanges[T Object] struct {
-	Account         ID     `json:"accountId,omitzero"`
-	SinceQueryState string `json:"sinceQueryState,omitzero"`
-	MaxChanges      uint64 `json:"maxChanges,omitzero"`
-	UpToID          ID     `json:"upToId,omitzero"`
-	CalculateTotal  bool   `json:"calculateTotal,omitzero"`
+	Account         ID               `json:"accountId,omitzero"`
+	SinceQueryState string           `json:"sinceQueryState,omitzero"`
+	MaxChanges      uint64           `json:"maxChanges,omitzero"`
+	UpToID          ID               `json:"upToId,omitzero"`
+	ReferenceUpToID *ResultReference `json:"#upToId,omitzero"`
+	CalculateTotal  bool             `json:"calculateTotal,omitzero"`
 }
 
 func (m *QueryChanges[T]) Name() string {
@@ -120,11 +122,12 @@ type QueryChangesResponse struct {
 
 // Set creates, updates, or destroys objects (RFC 8620 §5.3).
 type Set[T Object] struct {
-	Account   ID           `json:"accountId,omitzero"`
-	IfInState string       `json:"ifInState,omitzero"`
-	Create    map[ID]*T    `json:"create,omitzero"`
-	Update    map[ID]Patch `json:"update,omitzero"`
-	Destroy   []ID         `json:"destroy,omitzero"`
+	Account          ID               `json:"accountId,omitzero"`
+	IfInState        string           `json:"ifInState,omitzero"`
+	Create           map[ID]*T        `json:"create,omitzero"`
+	Update           map[ID]Patch     `json:"update,omitzero"`
+	Destroy          []ID             `json:"destroy,omitzero"`
+	ReferenceDestroy *ResultReference `json:"#destroy,omitzero"`
 }
 
 func (m *Set[T]) Name() string {

@@ -1,7 +1,7 @@
 package contactcard
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/contacts"
@@ -24,9 +24,9 @@ func init() {
 // ContactCard is a JSContact card with JMAP ContactCard metadata.
 // https://www.rfc-editor.org/rfc/rfc9610.html#section-3
 type ContactCard struct {
-	ID jmap.ID `json:"id,omitempty"`
+	ID jmap.ID `json:"id,omitzero"`
 
-	AddressBookIDs map[jmap.ID]bool `json:"addressBookIds,omitempty"`
+	AddressBookIDs map[jmap.ID]bool `json:"addressBookIds,omitzero"`
 
 	jscontact.Card
 }
@@ -35,54 +35,29 @@ func (ContactCard) JMAPType() string { return "ContactCard" }
 
 func (ContactCard) Requires() []jmap.URI { return []jmap.URI{contacts.URI} }
 
+// contactCardJSON is ContactCard without custom marshalers so json/v2 can
+// apply Card's Extra embed together with the JMAP metadata keys.
+type contactCardJSON struct {
+	ID             jmap.ID          `json:"id,omitzero"`
+	AddressBookIDs map[jmap.ID]bool `json:"addressBookIds,omitzero"`
+	jscontact.Card
+}
+
 func (c ContactCard) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(c.Card)
-	if err != nil {
-		return nil, err
-	}
-
-	var obj map[string]json.RawMessage
-	if err := json.Unmarshal(data, &obj); err != nil {
-		return nil, err
-	}
-
-	if c.ID != "" {
-		data, err := json.Marshal(c.ID)
-		if err != nil {
-			return nil, err
-		}
-		obj["id"] = data
-	}
-	if len(c.AddressBookIDs) > 0 {
-		data, err := json.Marshal(c.AddressBookIDs)
-		if err != nil {
-			return nil, err
-		}
-		obj["addressBookIds"] = data
-	}
-
-	return json.Marshal(obj)
+	return jsonv2.Marshal(contactCardJSON{
+		ID:             c.ID,
+		AddressBookIDs: c.AddressBookIDs,
+		Card:           c.Card,
+	})
 }
 
 func (c *ContactCard) UnmarshalJSON(data []byte) error {
-	type metadata struct {
-		ID             jmap.ID          `json:"id,omitempty"`
-		AddressBookIDs map[jmap.ID]bool `json:"addressBookIds,omitempty"`
-	}
-
-	var meta metadata
-	if err := json.Unmarshal(data, &meta); err != nil {
+	var aux contactCardJSON
+	if err := jsonv2.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-
-	var card jscontact.Card
-	if err := json.Unmarshal(data, &card); err != nil {
-		return err
-	}
-
-	c.ID = meta.ID
-	c.AddressBookIDs = meta.AddressBookIDs
-	c.Card = card
-
+	c.ID = aux.ID
+	c.AddressBookIDs = aux.AddressBookIDs
+	c.Card = aux.Card
 	return nil
 }

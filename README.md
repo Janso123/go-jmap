@@ -2,14 +2,14 @@
 
 A JMAP **client** library for Go: typed methods, session/HTTPS transport, EventSource, and RFC 8887 WebSocket.
 
-**Module:** [`github.com/Janso123/go-jmap`](https://github.com/Janso123/go-jmap) · **Tag:** `v1.0.0-alpha.1` · **Go:** 1.27+ (`toolchain go1.27.1`)
+**Module:** [`github.com/Janso123/go-jmap`](https://github.com/Janso123/go-jmap) · **Tag:** `v1.0.0-alpha.2` · **Go:** 1.27+ (`toolchain go1.27.1`)
 
 Alpha: APIs may still change before a stable `v1.0.0`. Not a drop-in for older rockorager import paths.
 
 ## Install
 
 ```bash
-go get github.com/Janso123/go-jmap@v1.0.0-alpha.1
+go get github.com/Janso123/go-jmap@v1.0.0-alpha.2
 ```
 
 Requires Go **1.27+** (pulled in by `github.com/coder/websocket` v1.8.x).
@@ -159,8 +159,10 @@ Mail packages (`mail/email`, `mail/mailbox`, …) register via their normal impo
 | **Generic method kit** | `Get` / `Changes` / `Query` / `QueryChanges` / `Set` / `Copy` parameterized on object types; thin packages embed and add RFC fields |
 | **One-shot** | `jmap.Call[T](ctx, client, method)` — typed response or `*MethodError` |
 | **Responses** | `Response.ByCallID`, `jmap.As[T]`; unknown methods → `*UnknownResponse` (does not fail the whole response) |
-| **Filters / sort** | `And` / `Or` / `Not`; mail helpers like `email.InMailbox`, `email.HasKeyword`; path constants (`PathCreated`, …) and `CreationRef` |
-| **Transport** | Context on all I/O; `problem+json` → `RequestError`; blob upload/download; Discover (SRV + `.well-known`); `WithTrustedHosts`, `WithTimeout` |
+| **Filters / sort** | `jmap.And(email.InMailbox(...))`; domain `FilterCondition` implements `jmap.Filter`; sort is `[]*jmap.Comparator` |
+| **JSContact / JSCalendar** | Unknown properties in public `Extra map[string]jsontext.Value` (`json:",embed"`); json/v2 |
+| **UTCDate / Date** | RFC 8620 §1.4: `*jmap.UTCDate` always `Z`; `jmap.Date` is RFC 3339 date-time with offset preserved |
+| **Transport** | Context on all I/O; origin-scoped `Authorization`; RFC 6570 L1 URI templates; `problem+json` → `RequestError`; non-JSON HTTP → `HTTPError`; blob upload/download; Discover (SRV + `.well-known`); `WithTrustedHosts`, `WithTimeout` |
 | **Session** | `Do` marks stale on `sessionState` mismatch — call `SessionStale()` / `RefreshSession(ctx)` yourself |
 | **Push** | EventSource (`core/push`) and WebSocket (`core/push/websocket`) with push enable/disable and `pushState` |
 
@@ -168,7 +170,7 @@ Mail packages (`mail/email`, `mail/mailbox`, …) register via their normal impo
 
 | Caveat | Detail |
 |--------|--------|
-| Auth option order | `WithBearer` / `WithBasic` replace `HttpClient`; apply auth before `WithTimeout` / `WithTrustedHosts`, or pass a ready client via `WithHTTPClient` alone |
+| Auth option order | `WithBearer` / `WithBasic` wrap the current `Transport` and keep Timeout, CheckRedirect, and Jar. Credentials are sent only to the session origin plus `apiUrl`/`uploadUrl`/`downloadUrl`/`eventSourceUrl` (and WebSocket URL after `AllowAuthOrigin`). `WithHTTPClient` after auth replaces the whole client (including auth). Timeout / TrustedHosts compose with Bearer/Basic. |
 | Bool `false` on wire | Prefer `*bool` + `omitzero` (`nil` omit, `&false` send) for fields like `isSubscribed` / `isEnabled` |
 | No H2 CONNECT | Use HTTP/1.1 WebSocket upgrade |
 | Calendars | Draft-pinned; stays **Partial** until RFCs ship (see below) |
@@ -191,30 +193,30 @@ Published RFCs on jmap.io are **Done** for a client library except calendar draf
 
 | Spec | Spec status | Test coverage (approx) | Notes |
 |------|-------------|------------------------|-------|
-| [RFC 8620](https://www.rfc-editor.org/rfc/rfc8620) Core | Done | root ~62%; `core` ~86%; EventSource ~81%; subscription ~75% | Session, Request/Response, errors, HTTPS blobs, `Blob/copy`, PushSubscription, EventSource, Discover |
-| [RFC 8887](https://www.rfc-editor.org/rfc/rfc8887) WebSocket | Done (H1) | `websocket` ~82% | H1 Upgrade via `coder/websocket`; H2 Extended CONNECT **Blocked** (stub) |
+| [RFC 8620](https://www.rfc-editor.org/rfc/rfc8620) Core | Done | root ~69%; `core` ~83%; EventSource ~80%; subscription ~67% | Session, Request/Response, errors, HTTPS blobs, `Blob/copy`, PushSubscription, EventSource, Discover |
+| [RFC 8887](https://www.rfc-editor.org/rfc/rfc8887) WebSocket | Done (H1) | `websocket` ~81% | H1 Upgrade via `coder/websocket`; H2 Extended CONNECT **Blocked** (stub) |
 | [RFC 9749](https://www.rfc-editor.org/rfc/rfc9749) VAPID | Done | `vapid` ~100% | Capability + `applicationServerKey` |
-| [RFC 9670](https://www.rfc-editor.org/rfc/rfc9670) Sharing | Done | sharing 86–100% | Principal + ShareNotification |
-| [RFC 9425](https://www.rfc-editor.org/rfc/rfc9425) Quotas | Done | `quota` ~82% | get/changes/query/queryChanges |
+| [RFC 9670](https://www.rfc-editor.org/rfc/rfc9670) Sharing | Done | sharing 62–100% | Principal + ShareNotification (set is destroy-only) |
+| [RFC 9425](https://www.rfc-editor.org/rfc/rfc9425) Quotas | Done | `quota` ~64% | get/changes/query/queryChanges |
 | [RFC 9404](https://www.rfc-editor.org/rfc/rfc9404) Blob Management | Done | `blob` ~70% | upload/get/lookup (+ Core `Blob/copy`) |
 
 ### Mail
 
 | Spec | Spec status | Test coverage (approx) | Notes |
 |------|-------------|------------------------|-------|
-| [RFC 8621](https://www.rfc-editor.org/rfc/rfc8621) Mail | Done | `email` ~56%; mailbox ~86%; others ~55–100% | Types/methods present; filters/keywords/`header:*`/S/MIME/Import/Parse wire fixtures; large Email surface still incomplete |
-| [RFC 9007](https://www.rfc-editor.org/rfc/rfc9007) MDN | Done | `mdn` ~82% | send/parse |
-| [RFC 9219](https://www.rfc-editor.org/rfc/rfc9219) S/MIME verify | Done | (in `email`, ~56%) | Capability + Email SMIME fields/filters with dedicated wire fixtures |
-| [RFC 9661](https://www.rfc-editor.org/rfc/rfc9661) Sieve | Done | `sieve` ~100% | get/set/query/validate |
+| [RFC 8621](https://www.rfc-editor.org/rfc/rfc8621) Mail | Done | `email` ~57%; mailbox ~58%; others ~67–100% | Types/methods present; filters/keywords/`header:*`/S/MIME/Import/Parse wire fixtures; large Email surface still incomplete |
+| [RFC 9007](https://www.rfc-editor.org/rfc/rfc9007) MDN | Done | `mdn` ~82% | send/parse; `$mdnsent` keyword |
+| [RFC 9219](https://www.rfc-editor.org/rfc/rfc9219) S/MIME verify | Done | (in `email`, ~57%) | Capability + Email SMIME fields/filters; `using` includes `smimeverify` when properties or filters need it |
+| [RFC 9661](https://www.rfc-editor.org/rfc/rfc9661) Sieve | Done | `sieve` ~88% | get/set/query/validate |
 
 ### Contacts and calendars
 
 | Spec | Spec status | Test coverage (approx) | Notes |
 |------|-------------|------------------------|-------|
-| [RFC 9610](https://www.rfc-editor.org/rfc/rfc9610) Contacts | Done | addressbook ~86%; contactcard ~45% | AddressBook + ContactCard |
-| [RFC 9553](https://www.rfc-editor.org/rfc/rfc9553) JSContact | Done | `jscontact` ~84% | Typed Card model |
-| JMAP Calendars (draft) | Partial | calendar pkgs ~86–100% | Pinned [draft-ietf-jmap-calendars-29](https://datatracker.ietf.org/doc/draft-ietf-jmap-calendars/29/); methods complete; stays Partial until RFC |
-| JSCalendar 2.0 (draft) | Partial | `jscalendar` ~54% | Pinned [draft-ietf-calext-jscalendarbis-20](https://datatracker.ietf.org/doc/html/draft-ietf-calext-jscalendarbis-20); typed Event core; Task/Group and some Event fields via extensions |
+| [RFC 9610](https://www.rfc-editor.org/rfc/rfc9610) Contacts | Done | addressbook ~86%; contactcard ~72% | AddressBook + ContactCard |
+| [RFC 9553](https://www.rfc-editor.org/rfc/rfc9553) JSContact | Done | `jscontact` ~55% | Typed Card model |
+| JMAP Calendars (draft) | Partial | calendar pkgs ~70–100% | Pinned [draft-ietf-jmap-calendars-29](https://datatracker.ietf.org/doc/draft-ietf-jmap-calendars/29/); methods complete; stays Partial until RFC |
+| JSCalendar 2.0 (draft) | Partial | `jscalendar` ~47% | Pinned [draft-ietf-calext-jscalendarbis-20](https://datatracker.ietf.org/doc/html/draft-ietf-calext-jscalendarbis-20); typed Event core including `priority`/`privacy`/`freeBusyStatus`; unknown keys in `Extra`; Task/Group not typed |
 
 ### Blocked
 

@@ -32,9 +32,10 @@ type Conn struct {
 	pending map[string]chan doResult
 	handler func(*jmap.StateChange)
 
-	pushState     string
-	pushEnabled   bool
-	pushDataTypes []jmap.EventType
+	pushState        string
+	pushEnabled      bool
+	pushDataTypes    []jmap.EventType
+	pushDataTypesNil bool
 
 	nextID atomic.Uint64
 	gate   *requestGate
@@ -112,6 +113,7 @@ func DialURL(ctx context.Context, client *jmap.Client, wsURL string, opts ...Opt
 	if err := ensureSession(ctx, client); err != nil {
 		return nil, err
 	}
+	client.AllowAuthOrigin(wsURL)
 
 	o := mergeOptions(opts)
 	c := &Conn{
@@ -232,15 +234,12 @@ func (c *Conn) EnablePush(dataTypes []jmap.EventType, pushState string) error {
 	c.mu.Lock()
 	c.pushEnabled = true
 	c.pushDataTypes = append([]jmap.EventType(nil), dataTypes...)
+	c.pushDataTypesNil = dataTypes == nil
 	if pushState != "" {
 		c.pushState = pushState
 	}
 	c.mu.Unlock()
-	return c.writeJSON(PushEnable{
-		Type:      "WebSocketPushEnable",
-		DataTypes: dataTypes,
-		PushState: pushState,
-	})
+	return c.writeJSON(pushEnableFrame(dataTypes, pushState))
 }
 
 // DisablePush sends WebSocketPushDisable.
@@ -261,7 +260,11 @@ func (c *Conn) Do(ctx context.Context, req *jmap.Request) (*jmap.Response, error
 
 	found := slices.Contains(req.Using, jmap.CoreURI)
 	if !found {
-		req.Using = append(req.Using, jmap.CoreURI)
+		using := append([]jmap.URI(nil), req.Using...)
+		using = append(using, jmap.CoreURI)
+		cp := *req
+		cp.Using = using
+		req = &cp
 	}
 
 	c.client.Lock()
@@ -363,7 +366,9 @@ func (c *Conn) writeJSON(v any) error {
 	if err != nil {
 		return err
 	}
-	return c.writeRaw(context.Background(), raw)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return c.writeRaw(ctx, raw)
 }
 
 func (c *Conn) writeRaw(ctx context.Context, raw []byte) error {
@@ -426,8 +431,23 @@ func (c *Conn) readLoop(ctx context.Context) {
 				c.opts.OnCalendarAlert(fr.CalendarAlert)
 			}
 		case fr.Response != nil:
+			c.client.ObserveSessionState(fr.Response.SessionState)
+			if fr.RequestID == "" {
+				c.failPending(fmt.Errorf("websocket: Response missing requestId"))
+				if c.opts.OnFrameError != nil {
+					c.opts.OnFrameError(fmt.Errorf("websocket: Response missing requestId"), data)
+				}
+				break
+			}
 			c.deliver(fr.RequestID, doResult{resp: fr.Response})
 		case fr.RequestError != nil:
+			if fr.RequestID == "" {
+				c.failPending(fr.RequestError)
+				if c.opts.OnFrameError != nil {
+					c.opts.OnFrameError(fr.RequestError, data)
+				}
+				break
+			}
 			c.deliver(fr.RequestID, doResult{err: fr.RequestError})
 		}
 	}
@@ -474,6 +494,13 @@ func (c *Conn) readLoop(ctx context.Context) {
 		case <-timer.C:
 		}
 
+		c.mu.Lock()
+		if c.userClosed {
+			c.mu.Unlock()
+			return
+		}
+		c.mu.Unlock()
+
 		dialCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		err := c.dialUnderlying(dialCtx)
 		cancel()
@@ -486,8 +513,20 @@ func (c *Conn) readLoop(ctx context.Context) {
 		}
 
 		c.mu.Lock()
+		if c.userClosed {
+			ws := c.ws
+			c.ws = nil
+			c.mu.Unlock()
+			if ws != nil {
+				_ = ws.CloseNow()
+			}
+			return
+		}
 		pushEnabled := c.pushEnabled
 		dataTypes := append([]jmap.EventType(nil), c.pushDataTypes...)
+		if c.pushDataTypesNil {
+			dataTypes = nil
+		}
 		pushState := c.pushState
 		var onRe func()
 		if c.opts.Reconnect != nil {
@@ -496,11 +535,7 @@ func (c *Conn) readLoop(ctx context.Context) {
 		c.mu.Unlock()
 
 		if pushEnabled {
-			_ = c.writeJSON(PushEnable{
-				Type:      "WebSocketPushEnable",
-				DataTypes: dataTypes,
-				PushState: pushState,
-			})
+			_ = c.writeJSON(pushEnableFrame(dataTypes, pushState))
 		}
 		if onRe != nil {
 			onRe()

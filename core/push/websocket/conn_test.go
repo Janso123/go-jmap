@@ -114,7 +114,7 @@ func TestConnDoAndPush(t *testing.T) {
 	assert.Equal(t, "bbb", conn.PushState())
 
 	req := &jmap.Request{}
-	req.Invoke(&core.Echo{Hello: "world"})
+	req.Invoke(core.Echo{"hello": "world"})
 	resp, err := conn.Do(ctx, req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -123,6 +123,78 @@ func TestConnDoAndPush(t *testing.T) {
 	assert.Equal(t, "s", resp.SessionState)
 
 	require.NoError(t, conn.DisablePush())
+}
+
+func TestConnDoMarksSessionStale(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "jmap", r.Header.Get("Sec-WebSocket-Protocol"))
+		assert.True(t, strings.HasPrefix(strings.ToLower(r.Header.Get("Authorization")), "basic "))
+
+		c, err := cws.Accept(w, r, &cws.AcceptOptions{
+			Subprotocols:       []string{"jmap"},
+			InsecureSkipVerify: true,
+		})
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+
+		ctx := context.Background()
+		for {
+			_, data, err := c.Read(ctx)
+			if err != nil {
+				return
+			}
+			var probe struct {
+				Type string `json:"@type"`
+				ID   string `json:"id"`
+			}
+			if err := json.Unmarshal(data, &probe); err != nil {
+				return
+			}
+			switch probe.Type {
+			case "WebSocketPushEnable":
+				msg := `{"@type":"StateChange","changed":{"a1":{"Email":"e1"}},"pushState":"bbb"}`
+				_ = c.Write(ctx, cws.MessageText, []byte(msg))
+			case "WebSocketPushDisable":
+				// no reply
+			case "Request":
+				resp := fmt.Sprintf(
+					`{"@type":"Response","requestId":%q,"methodResponses":[["Core/echo",{"Hello":"world"},"0"]],"sessionState":"s"}`,
+					probe.ID,
+				)
+				_ = c.Write(ctx, cws.MessageText, []byte(resp))
+			}
+		}
+	}))
+	defer s.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/jmap/ws/"
+
+	jc := (&jmap.Client{}).WithBasicAuth("user", "pass")
+	jc.Session = &jmap.Session{
+		State: "old",
+		RawCapabilities: map[jmap.URI]jsontext.Value{
+			jmap.CoreURI: []byte(`{}`),
+			URI:          []byte(`{"url":"` + wsURL + `","supportsPush":true}`),
+		},
+		Capabilities: map[jmap.URI]jmap.Capability{
+			URI: &WebSocket{URL: wsURL, SupportsPush: true},
+		},
+	}
+
+	ctx := context.Background()
+	conn, err := Dial(ctx, jc)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	req := &jmap.Request{}
+	req.Invoke(core.Echo{"hello": "world"})
+	resp, err := conn.Do(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "s", resp.SessionState)
+	require.True(t, jc.SessionStale())
 }
 
 func TestConnDoRequestError(t *testing.T) {
@@ -171,7 +243,7 @@ func TestConnDoRequestError(t *testing.T) {
 	defer conn.Close()
 
 	req := &jmap.Request{}
-	req.Invoke(&core.Echo{Hello: "x"})
+	req.Invoke(core.Echo{"hello": "x"})
 	_, err = conn.Do(context.Background(), req)
 	require.Error(t, err)
 	var re *jmap.RequestError
@@ -250,7 +322,7 @@ func TestOnFrameErrorCalled(t *testing.T) {
 	defer conn.Close()
 
 	req := &jmap.Request{}
-	req.Invoke(&core.Echo{Hello: "ok"})
+	req.Invoke(core.Echo{"hello": "ok"})
 	doCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	resp, err := conn.Do(doCtx, req)
@@ -297,4 +369,49 @@ func TestPingPublic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	require.NoError(t, conn.Ping(ctx))
+}
+
+func TestConnDoUnblocksOnNullRequestIdError(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := cws.Accept(w, r, &cws.AcceptOptions{
+			Subprotocols:       []string{"jmap"},
+			InsecureSkipVerify: true,
+		})
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+		ctx := context.Background()
+		for {
+			_, _, err := c.Read(ctx)
+			if err != nil {
+				return
+			}
+			_ = c.Write(ctx, cws.MessageText, []byte(`{"@type":"RequestError","requestId":null,"type":"urn:ietf:params:jmap:error:notJSON","status":400,"detail":"bad"}`))
+		}
+	}))
+	defer s.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
+	jc := &jmap.Client{
+		Session: &jmap.Session{
+			RawCapabilities: map[jmap.URI]jsontext.Value{
+				jmap.CoreURI: []byte(`{}`),
+			},
+		},
+	}
+	conn, err := DialURL(context.Background(), jc, wsURL)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	req := &jmap.Request{}
+	req.Invoke(core.Echo{"hello": "x"})
+	doCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err = conn.Do(doCtx, req)
+	require.Error(t, err)
+	require.NotErrorIs(t, err, context.DeadlineExceeded)
+	var re *jmap.RequestError
+	require.ErrorAs(t, err, &re)
+	require.Equal(t, 400, re.Status)
 }

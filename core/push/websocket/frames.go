@@ -9,10 +9,11 @@ import (
 )
 
 // PushEnable is a WebSocketPushEnable client frame (RFC 8887 §4.3.5.2).
+// DataTypes nil (JSON null) means all types; a non-nil empty slice means none.
 type PushEnable struct {
-	Type      string           `json:"@type"`
-	DataTypes []jmap.EventType `json:"dataTypes"`
-	PushState string           `json:"pushState,omitempty"`
+	Type      string            `json:"@type"`
+	DataTypes *[]jmap.EventType `json:"dataTypes"`
+	PushState string            `json:"pushState,omitzero"`
 }
 
 // PushDisable is a WebSocketPushDisable client frame (RFC 8887 §4.3.5.3).
@@ -32,10 +33,10 @@ type serverFrame struct {
 func marshalRequest(id string, req *jmap.Request) ([]byte, error) {
 	type wsReq struct {
 		Type       string              `json:"@type"`
-		ID         string              `json:"id,omitempty"`
+		ID         string              `json:"id,omitzero"`
 		Using      []jmap.URI          `json:"using"`
 		Calls      []*jmap.Invocation  `json:"methodCalls"`
-		CreatedIDs map[jmap.ID]jmap.ID `json:"createdIds,omitempty"`
+		CreatedIDs map[jmap.ID]jmap.ID `json:"createdIds,omitzero"`
 	}
 	return jsonv2.Marshal(wsReq{
 		Type:       "Request",
@@ -76,24 +77,12 @@ func decodeServerFrame(data []byte) (*serverFrame, error) {
 		fr.StateChange = sc
 		return fr, nil
 	case "RequestError":
-		var wrap struct {
-			AtType    string  `json:"@type"`
-			RequestID string  `json:"requestId"`
-			Type      string  `json:"type"`
-			Status    int     `json:"status"`
-			Detail    string  `json:"detail"`
-			Limit     *string `json:"limit"`
-		}
-		if err := jsonv2.Unmarshal(data, &wrap); err != nil {
+		var re jmap.RequestError
+		if err := jsonv2.Unmarshal(data, &re); err != nil {
 			return nil, err
 		}
-		fr.RequestID = wrap.RequestID
-		fr.RequestError = &jmap.RequestError{
-			Type:   wrap.Type,
-			Status: wrap.Status,
-			Detail: wrap.Detail,
-			Limit:  wrap.Limit,
-		}
+		fr.RequestID = re.RequestID
+		fr.RequestError = &re
 		return fr, nil
 	case "CalendarAlert":
 		alert := &calendar.CalendarAlert{}
@@ -105,4 +94,13 @@ func decodeServerFrame(data []byte) (*serverFrame, error) {
 	default:
 		return nil, fmt.Errorf("websocket: unknown frame @type %q", probe.Type)
 	}
+}
+
+func pushEnableFrame(dataTypes []jmap.EventType, pushState string) PushEnable {
+	fr := PushEnable{Type: "WebSocketPushEnable", PushState: pushState}
+	if dataTypes != nil {
+		cp := append([]jmap.EventType(nil), dataTypes...)
+		fr.DataTypes = &cp
+	}
+	return fr
 }

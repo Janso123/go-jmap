@@ -5,40 +5,32 @@ import (
 	"github.com/Janso123/go-jmap/calendar/jscalendar"
 )
 
-type Filter interface {
-	implementsFilter()
-}
-
-type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
-
-	Conditions []Filter `json:"conditions,omitempty"`
-}
-
-func (fo *FilterOperator) implementsFilter() {}
-
 // FilterCondition defines CalendarEvent query filters.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.11.1
 type FilterCondition struct {
-	InCalendar jmap.ID `json:"inCalendar,omitempty"`
+	jmap.FilterBase `json:"-"`
 
-	After jscalendar.LocalDateTime `json:"after,omitempty"`
+	InCalendar jmap.ID `json:"inCalendar,omitzero"`
 
-	Before jscalendar.LocalDateTime `json:"before,omitempty"`
+	After jscalendar.LocalDateTime `json:"after,omitzero"`
 
-	Text string `json:"text,omitempty"`
+	Before jscalendar.LocalDateTime `json:"before,omitzero"`
 
-	Title string `json:"title,omitempty"`
+	Text string `json:"text,omitzero"`
 
-	Description string `json:"description,omitempty"`
+	Title string `json:"title,omitzero"`
 
-	Location string `json:"location,omitempty"`
+	Description string `json:"description,omitzero"`
 
-	Owner string `json:"owner,omitempty"`
+	Location string `json:"location,omitzero"`
 
-	Attendee string `json:"attendee,omitempty"`
+	Owner string `json:"owner,omitzero"`
 
-	UID string `json:"uid,omitempty"`
+	Attendee string `json:"attendee,omitzero"`
+
+	UID string `json:"uid,omitzero"`
 }
 
-func (fc *FilterCondition) implementsFilter() {}
+func And(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.And(conds...) }
+func Or(conds ...jmap.Filter) *jmap.FilterOperator  { return jmap.Or(conds...) }
+func Not(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.Not(conds...) }

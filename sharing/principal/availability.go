@@ -19,31 +19,31 @@ const (
 
 // BusyPeriod describes a span of time when a principal is unavailable.
 type BusyPeriod struct {
-	UTCStart jscalendar.UTCDateTime `json:"utcStart,omitempty"`
+	UTCStart jscalendar.UTCDateTime `json:"utcStart,omitzero"`
 
-	UTCEnd jscalendar.UTCDateTime `json:"utcEnd,omitempty"`
+	UTCEnd jscalendar.UTCDateTime `json:"utcEnd,omitzero"`
 
-	BusyStatus BusyStatus `json:"busyStatus,omitempty"`
+	BusyStatus BusyStatus `json:"busyStatus,omitzero"`
 
-	Event *calendarevent.CalendarEvent `json:"event,omitempty"`
+	Event *calendarevent.CalendarEvent `json:"event,omitzero"`
 
-	AccountID *jmap.ID `json:"accountId,omitempty"`
+	AccountID *jmap.ID `json:"accountId,omitzero"`
 }
 
 // GetAvailability calculates scheduling availability for a principal.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-2.2
 type GetAvailability struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	ID jmap.ID `json:"id,omitempty"`
+	ID jmap.ID `json:"id,omitzero"`
 
-	UTCStart jscalendar.UTCDateTime `json:"utcStart,omitempty"`
+	UTCStart jscalendar.UTCDateTime `json:"utcStart,omitzero"`
 
-	UTCEnd jscalendar.UTCDateTime `json:"utcEnd,omitempty"`
+	UTCEnd jscalendar.UTCDateTime `json:"utcEnd,omitzero"`
 
-	ShowDetails bool `json:"showDetails,omitempty"`
+	ShowDetails bool `json:"showDetails,omitzero"`
 
-	EventProperties []string `json:"eventProperties,omitempty"`
+	EventProperties []string `json:"eventProperties,omitzero"`
 }
 
 func (m *GetAvailability) Name() string { return "Principal/getAvailability" }
@@ -53,7 +53,7 @@ func (m *GetAvailability) Requires() []jmap.URI {
 }
 
 type GetAvailabilityResponse struct {
-	List []*BusyPeriod `json:"list,omitempty"`
+	List []*BusyPeriod `json:"list,omitzero"`
 }
 
 func newGetAvailabilityResponse() jmap.MethodResponse { return &GetAvailabilityResponse{} }

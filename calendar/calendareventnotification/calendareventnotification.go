@@ -1,8 +1,6 @@
 package calendareventnotification
 
 import (
-	"time"
-
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/calendar"
 	"github.com/Janso123/go-jmap/calendar/jscalendar"
@@ -43,8 +41,6 @@ type Person struct {
 	PrincipalID *jmap.ID `json:"principalId,omitzero"`
 
 	CalendarAddress *string `json:"calendarAddress,omitzero"`
-
-	Comment *string `json:"comment,omitzero"`
 }
 
 // CalendarEventNotification tracks server-created event change notifications.
@@ -52,9 +48,11 @@ type Person struct {
 type CalendarEventNotification struct {
 	ID jmap.ID `json:"id,omitzero"`
 
-	Created *time.Time `json:"created,omitzero"`
+	Created *jmap.UTCDate `json:"created,omitzero"`
 
 	ChangedBy *Person `json:"changedBy,omitzero"`
+
+	Comment *string `json:"comment,omitzero"`
 
 	Type Type `json:"type,omitzero"`
 

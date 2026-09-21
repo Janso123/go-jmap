@@ -2,7 +2,6 @@ package email
 
 import (
 	"github.com/Janso123/go-jmap"
-	"github.com/Janso123/go-jmap/mail"
 )
 
 // Parse binary blobs as RFC5322 messages
@@ -27,7 +26,9 @@ type Parse struct {
 
 func (m *Parse) Name() string { return "Email/parse" }
 
-func (m *Parse) Requires() []jmap.URI { return []jmap.URI{mail.URI} }
+func (m *Parse) Requires() []jmap.URI {
+	return mailRequires(propertiesNeedSMIME(m.Properties))
+}
 
 type ParseResponse struct {
 	Account jmap.ID `json:"accountId,omitzero"`

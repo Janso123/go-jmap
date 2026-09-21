@@ -1,33 +1,21 @@
 package calendareventnotification
 
-import (
-	"time"
-
-	"github.com/Janso123/go-jmap"
-)
-
-type Filter interface {
-	implementsFilter()
-}
-
-type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
-
-	Conditions []Filter `json:"conditions,omitempty"`
-}
-
-func (fo *FilterOperator) implementsFilter() {}
+import "github.com/Janso123/go-jmap"
 
 // FilterCondition filters event notifications by creation time, type, or event.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-7.4.1
 type FilterCondition struct {
-	After *time.Time `json:"after,omitempty"`
+	jmap.FilterBase `json:"-"`
 
-	Before *time.Time `json:"before,omitempty"`
+	After *jmap.UTCDate `json:"after,omitzero"`
 
-	Type Type `json:"type,omitempty"`
+	Before *jmap.UTCDate `json:"before,omitzero"`
 
-	CalendarEventIDs []jmap.ID `json:"calendarEventIds,omitempty"`
+	Type Type `json:"type,omitzero"`
+
+	CalendarEventIDs []jmap.ID `json:"calendarEventIds,omitzero"`
 }
 
-func (fc *FilterCondition) implementsFilter() {}
+func And(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.And(conds...) }
+func Or(conds ...jmap.Filter) *jmap.FilterOperator  { return jmap.Or(conds...) }
+func Not(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.Not(conds...) }

@@ -18,7 +18,7 @@ type Request struct {
 
 	// A map of (client-specified) creation ID to the ID the server assigned
 	// when a record was successfully created.
-	CreatedIDs map[ID]ID `json:"createdIds,omitempty"`
+	CreatedIDs map[ID]ID `json:"createdIds,omitzero"`
 }
 
 // Invoke a method. Each call to Invoke will add the passed Method to the

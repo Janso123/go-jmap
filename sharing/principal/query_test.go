@@ -17,10 +17,10 @@ func TestQueryInvoke(t *testing.T) {
 		Filter: &FilterCondition{
 			Text: "jane",
 		},
-		Sort: []*SortComparator{
+		Sort: []*jmap.Comparator{
 			{Property: "name"},
 		},
-		Limit: 10,
+		Limit: jmap.Uint64Ptr(10),
 	})
 	assert.Equal(t, "0", id)
 
@@ -29,4 +29,12 @@ func TestQueryInvoke(t *testing.T) {
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["Principal/query",{"accountId":"u1","limit":10,"filter":{"text":"jane"},"sort":[{"property":"name","isAscending":false}]},"0"]]}`,
 		string(data))
+}
+
+func TestQueryRequiresAvailabilityForCalendarAddress(t *testing.T) {
+	q := &Query{Filter: &FilterCondition{CalendarAddress: "mailto:a@b.c"}}
+	require.Equal(t, []jmap.URI{
+		"urn:ietf:params:jmap:principals",
+		"urn:ietf:params:jmap:principals:availability",
+	}, q.Requires())
 }

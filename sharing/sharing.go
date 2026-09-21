@@ -15,7 +15,7 @@ func init() {
 
 // Capability describes the principals session capability.
 type Capability struct {
-	CurrentUserPrincipalID *jmap.ID `json:"currentUserPrincipalId,omitempty"`
+	CurrentUserPrincipalID *jmap.ID `json:"currentUserPrincipalId,omitzero"`
 }
 
 func (c *Capability) URI() jmap.URI { return URI }
@@ -24,8 +24,8 @@ func (c *Capability) New() jmap.Capability { return &Capability{} }
 
 // OwnerCapability describes the principals owner account capability.
 type OwnerCapability struct {
-	AccountIDForPrincipal jmap.ID `json:"accountIdForPrincipal,omitempty"`
-	PrincipalID           jmap.ID `json:"principalId,omitempty"`
+	AccountIDForPrincipal jmap.ID `json:"accountIdForPrincipal,omitzero"`
+	PrincipalID           jmap.ID `json:"principalId,omitzero"`
 }
 
 func (c *OwnerCapability) URI() jmap.URI { return OwnerURI }

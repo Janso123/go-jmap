@@ -7,21 +7,10 @@ import "github.com/Janso123/go-jmap"
 type Query struct {
 	jmap.Query[CalendarEventNotification]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 }
 
 // QueryResponse is the result of CalendarEventNotification/query.
 type QueryResponse = jmap.QueryResponse
-
-type SortComparator struct {
-	// The name of the property on the CalendarEventNotification objects to compare.
-	Property string `json:"property,omitzero"`
-
-	// IsAscending has no omitzero: RFC default is true, so Desc must emit false.
-	IsAscending bool `json:"isAscending"`
-
-	// The identifier, as registered in the collation registry defined in RFC4790.
-	Collation jmap.CollationAlgo `json:"collation,omitzero"`
-}

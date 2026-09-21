@@ -57,5 +57,36 @@ func TestDownloadOptions(t *testing.T) {
 	defer rc.Close()
 
 	require.Equal(t, "/dl/acc/blob1/file.txt", gotPath)
-	require.Equal(t, "accept=text/plain", gotQuery)
+	require.Equal(t, "accept=text%2Fplain", gotQuery)
+}
+
+func TestDownloadEncodesTemplateVars(t *testing.T) {
+	var gotPath, gotRawQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		gotRawQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := &jmap.Client{
+		HttpClient:      srv.Client(),
+		SessionEndpoint: "http://unused",
+		Session: &jmap.Session{
+			DownloadURL: srv.URL + "/dl/{accountId}/{blobId}/{name}?accept={type}",
+		},
+	}
+	rc, err := c.Download(t.Context(), "acc", "blob/1", jmap.DownloadOptions{
+		Name: "a b?x#y",
+		Type: "application/octet-stream",
+	})
+	require.NoError(t, err)
+	rc.Close()
+	require.NotContains(t, gotPath, "?")
+	require.NotContains(t, gotPath, "#")
+	require.Contains(t, gotPath, "a%20b")
+	require.Contains(t, gotPath, "%3F")
+	require.Contains(t, gotPath, "%23")
+	require.NotContains(t, gotRawQuery, "application/octet-stream")
+	require.Contains(t, gotRawQuery, "application%2Foctet-stream")
 }

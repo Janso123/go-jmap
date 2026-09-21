@@ -22,7 +22,7 @@ type StateChange struct {
 	// PushState is an optional token encoding the entire server state visible
 	// to the user. Present when the StateChange is delivered over a JMAP
 	// WebSocket connection that supports pushState (RFC 8887 §4.3.5.1).
-	PushState string `json:"pushState,omitempty"`
+	PushState string `json:"pushState,omitzero"`
 }
 
 // TypeState is a map of Foo object names ("Mailbox", "Email", etc) to state

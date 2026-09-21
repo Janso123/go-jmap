@@ -22,6 +22,8 @@ func TestEventSourcePingAndLastEventID(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "text/event-stream", r.Header.Get("Accept"))
 		require.Equal(t, "42", r.Header.Get("Last-Event-ID"))
+		require.NotEmpty(t, r.Header.Get("User-Agent"))
+		require.Contains(t, r.Header.Get("User-Agent"), "go-jmap/")
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprint(w, ": comment\n\nevent: ping\ndata: {}\n\nid: 43\nevent: state\ndata: {\"changed\":{}}\n\n")
 	}))
@@ -262,4 +264,32 @@ func TestEventSourceReconnectPreservesLastEventID(t *testing.T) {
 	require.GreaterOrEqual(t, len(lastIDs), 2)
 	assert.Equal(t, "1", lastIDs[0])
 	assert.Equal(t, "10", lastIDs[1])
+}
+
+func TestEventSourceExpandsURITemplate(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "event: ping\ndata: {}\n\n")
+	}))
+	t.Cleanup(srv.Close)
+
+	es := &EventSource{
+		Client: &jmap.Client{
+			HttpClient: srv.Client(),
+			Session: &jmap.Session{
+				EventSourceURL: srv.URL + "/{types}/{closeafter}/{ping}",
+			},
+		},
+		Events:          []jmap.EventType{"Email"},
+		Ping:            300,
+		CloseAfterState: true,
+		OnPing:          func() {},
+		Handler:         func(*jmap.StateChange) {},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_ = es.Listen(ctx)
+	require.Equal(t, "/Email/state/300", gotPath)
 }

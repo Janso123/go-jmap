@@ -20,8 +20,8 @@ func init() {
 // Capability describes the JMAP Contacts capability.
 // The same type is also used for the empty session capability object.
 type Capability struct {
-	MaxAddressBooksPerCard *uint64 `json:"maxAddressBooksPerCard,omitempty"`
-	MayCreateAddressBook   bool    `json:"mayCreateAddressBook,omitempty"`
+	MaxAddressBooksPerCard *uint64 `json:"maxAddressBooksPerCard,omitzero"`
+	MayCreateAddressBook   *bool   `json:"mayCreateAddressBook,omitzero"`
 }
 
 func (c *Capability) URI() jmap.URI { return URI }

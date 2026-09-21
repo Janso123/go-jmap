@@ -17,7 +17,7 @@ func TestShareNotificationMarshal(t *testing.T) {
 
 	data, err := json.Marshal(&ShareNotification{
 		ID:              "sn1",
-		Created:         &created,
+		Created:         jmap.UTCDatePtr(created),
 		ChangedBy:       &Entity{Name: "Jane Doe", Email: &email, PrincipalID: &principalID},
 		ObjectAccountID: "a1",
 		ObjectType:      "Mailbox",

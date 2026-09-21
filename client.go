@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -20,8 +21,8 @@ import (
 type Client struct {
 	sync.Mutex
 	// HttpClient is used for requests. It should typically handle authentication.
-	// WithBasicAuth and WithAccessToken replace HttpClient with an oauth2-backed
-	// client; see those methods and NewClient option order docs. If nil,
+	// WithBasicAuth and WithAccessToken wrap the existing HttpClient transport
+	// with oauth2 while preserving Timeout, CheckRedirect, and Jar. If nil,
 	// http.DefaultClient is used via httpClient().
 	HttpClient *http.Client
 
@@ -53,6 +54,12 @@ func (c *Client) httpClient() *http.Client {
 	return c.HttpClient
 }
 
+// HTTPClient returns the HTTP client used for JMAP requests, or
+// http.DefaultClient when none is set.
+func (c *Client) HTTPClient() *http.Client {
+	return c.httpClient()
+}
+
 func (c *Client) userAgent() string {
 	if c.UserAgent != "" {
 		return c.UserAgent
@@ -60,34 +67,94 @@ func (c *Client) userAgent() string {
 	return "go-jmap/" + Version
 }
 
-// WithBasicAuth replaces HttpClient with a client that sends HTTP Basic auth.
-// Any previously set HttpClient (custom transport, timeout, CheckRedirect) is
-// discarded. Prefer applying auth before WithTimeout / WithTrustedHosts when
-// using NewClient options.
+// EffectiveUserAgent returns Client.UserAgent, or "go-jmap/"+Version when empty.
+func (c *Client) EffectiveUserAgent() string {
+	return c.userAgent()
+}
+
+func authHeader(tok *oauth2.Token) string {
+	typ := tok.TokenType
+	switch {
+	case strings.EqualFold(typ, "bearer"), typ == "":
+		typ = "Bearer"
+	case strings.EqualFold(typ, "basic"):
+		typ = "Basic"
+	}
+	return typ + " " + tok.AccessToken
+}
+
+func (c *Client) applyToken(tok *oauth2.Token) {
+	hc := c.HttpClient
+	if hc == nil || hc == http.DefaultClient {
+		hc = &http.Client{}
+	} else {
+		clone := *hc
+		hc = &clone
+	}
+	t := &originAuthTransport{
+		base:   unwrapOriginAuth(hc.Transport),
+		header: authHeader(tok),
+	}
+	t.allow(hostOf(c.SessionEndpoint))
+	hc.Transport = t
+	c.HttpClient = hc
+}
+
+func (c *Client) allowAuthHosts(s *Session) {
+	if c.HttpClient == nil {
+		return
+	}
+	t, ok := c.HttpClient.Transport.(*originAuthTransport)
+	if !ok {
+		return
+	}
+	t.allow(hostOf(c.SessionEndpoint))
+	if s == nil {
+		return
+	}
+	t.allow(hostOf(s.APIURL))
+	t.allow(hostOf(s.UploadURL))
+	t.allow(hostOf(s.DownloadURL))
+	t.allow(hostOf(s.EventSourceURL))
+}
+
+func resolveRef(base *url.URL, ref string) string {
+	if ref == "" || base == nil {
+		return ref
+	}
+	u, err := url.Parse(ref)
+	if err != nil {
+		return ref
+	}
+	return base.ResolveReference(u).String()
+}
+
+func (c *Client) resolveSessionURLs(s *Session) {
+	base, err := url.Parse(c.SessionEndpoint)
+	if err != nil {
+		return
+	}
+	s.APIURL = resolveRef(base, s.APIURL)
+	s.UploadURL = resolveRef(base, s.UploadURL)
+	s.DownloadURL = resolveRef(base, s.DownloadURL)
+	s.EventSourceURL = resolveRef(base, s.EventSourceURL)
+}
+
+// WithBasicAuth configures HttpClient to send HTTP Basic auth via oauth2.Transport.
+// Existing Timeout, CheckRedirect, Jar, and Transport.Base are preserved.
 func (c *Client) WithBasicAuth(username string, password string) *Client {
-	ctx := context.Background()
 	auth := username + ":" + password
-	t := &oauth2.Token{
+	c.applyToken(&oauth2.Token{
 		AccessToken: base64.StdEncoding.EncodeToString([]byte(auth)),
 		TokenType:   "basic",
-	}
-	cfg := &oauth2.Config{}
-	c.HttpClient = oauth2.NewClient(ctx, cfg.TokenSource(ctx, t))
+	})
 	return c
 }
 
-// WithAccessToken replaces HttpClient with a client that sends a Bearer token.
-// Any previously set HttpClient (custom transport, timeout, CheckRedirect) is
-// discarded. Prefer applying auth before WithTimeout / WithTrustedHosts when
-// using NewClient options.
+// WithAccessToken configures HttpClient to send a Bearer token via oauth2.Transport.
+// Existing Timeout, CheckRedirect, Jar, and Transport.Base are preserved.
 func (c *Client) WithAccessToken(token string) *Client {
-	ctx := context.Background()
-	t := &oauth2.Token{
-		AccessToken: token,
-		TokenType:   "bearer",
-	}
-	cfg := &oauth2.Config{}
-	c.HttpClient = oauth2.NewClient(ctx, cfg.TokenSource(ctx, t))
+	c.applyToken(&oauth2.Token{AccessToken: token, TokenType: "bearer"})
 	return c
 }
 
@@ -134,7 +201,7 @@ func (c *Client) Authenticate(ctx context.Context) error {
 		return decodeHttpError(resp)
 	}
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := readJSONBody(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -142,11 +209,14 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	s := &Session{}
 	err = jsonv2.Unmarshal(data, s)
 	if err != nil {
-		return err
+		return fmt.Errorf("jmap: decoding session: %w", err)
 	}
+	c.resolveSessionURLs(s)
 
 	c.Lock()
 	c.Session = s
+	c.sessionStale = false
+	c.allowAuthHosts(s)
 	c.Unlock()
 
 	return nil
@@ -161,19 +231,36 @@ func (c *Client) SessionStale() bool {
 	return c.sessionStale
 }
 
+// ObserveSessionState marks the cached Session stale when state is non-empty
+// and differs from Session.State. HTTPS Do and WebSocket Response frames call this.
+func (c *Client) ObserveSessionState(state string) {
+	if c == nil {
+		return
+	}
+	c.Lock()
+	defer c.Unlock()
+	if c.Session != nil && state != "" && state != c.Session.State {
+		c.sessionStale = true
+	}
+}
+
 // RefreshSession re-fetches the Session via Authenticate, clears the stale
 // flag, and invokes OnSessionChange when a previous Session existed.
 // Call this when SessionStale is true (or whenever you need a fresh Session).
 func (c *Client) RefreshSession(ctx context.Context) error {
+	c.Lock()
 	old := c.Session
+	cb := c.OnSessionChange
+	c.Unlock()
 	if err := c.Authenticate(ctx); err != nil {
 		return err
 	}
 	c.Lock()
 	c.sessionStale = false
+	neu := c.Session
 	c.Unlock()
-	if c.OnSessionChange != nil && old != nil {
-		c.OnSessionChange(old, c.Session)
+	if cb != nil && old != nil {
+		cb(old, neu)
 	}
 	return nil
 }
@@ -195,15 +282,14 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 	} else {
 		c.Unlock()
 	}
-	// Ensure the core capability is always included
-	found := slices.Contains(req.Using, CoreURI)
-	if !found {
-		req.Using = append(req.Using, CoreURI)
+	using := append([]URI(nil), req.Using...)
+	if !slices.Contains(using, CoreURI) {
+		using = append(using, CoreURI)
 	}
 
 	// Check the required capabilities before making the request
 	c.Lock()
-	for _, uri := range req.Using {
+	for _, uri := range using {
 		// Check RawCapabilities in case we have asked for unparsed
 		// capabilities, or the core capability
 		_, ok := c.Session.RawCapabilities[uri]
@@ -215,7 +301,9 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 	apiURL := c.Session.APIURL
 	c.Unlock()
 
-	body, err := jsonv2.Marshal(req)
+	wire := *req
+	wire.Using = using
+	body, err := jsonv2.Marshal(&wire)
 	if err != nil {
 		return nil, err
 	}
@@ -245,21 +333,17 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 		return nil, decodeHttpError(httpResp)
 	}
 
-	data, err := io.ReadAll(httpResp.Body)
+	data, err := readJSONBody(httpResp.Body)
 	if err != nil {
 		return nil, err
 	}
 	resp := &Response{}
 	err = jsonv2.Unmarshal(data, resp)
 	if err != nil {
-		return nil, fmt.Errorf("error? %v", err)
+		return nil, fmt.Errorf("jmap: decoding response: %w", err)
 	}
 
-	c.Lock()
-	if c.Session != nil && resp.SessionState != "" && resp.SessionState != c.Session.State {
-		c.sessionStale = true
-	}
-	c.Unlock()
+	c.ObserveSessionState(resp.SessionState)
 
 	return resp, nil
 }
@@ -302,13 +386,16 @@ func (c *Client) Upload(ctx context.Context, accountID ID, blob io.Reader, conte
 		c.Lock()
 	}
 
-	url := strings.ReplaceAll(c.Session.UploadURL, "{accountId}", string(accountID))
+	uploadURL := ExpandURITemplateLevel1(c.Session.UploadURL, map[string]string{
+		"accountId": string(accountID),
+	})
 	c.Unlock()
-	req, err := http.NewRequestWithContext(ctx, "POST", url, blob)
+	req, err := http.NewRequestWithContext(ctx, "POST", uploadURL, blob)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", c.userAgent())
 
 	resp, err := c.httpClient().Do(req)
@@ -321,7 +408,7 @@ func (c *Client) Upload(ctx context.Context, accountID ID, blob io.Reader, conte
 		return nil, decodeHttpError(resp)
 	}
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := readJSONBody(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -333,6 +420,28 @@ func (c *Client) Upload(ctx context.Context, accountID ID, blob io.Reader, conte
 	}
 
 	return info, nil
+}
+
+func expandDownloadURL(tmpl, accountID, blobID, typ, name string) string {
+	return ExpandURITemplateLevel1(tmpl, map[string]string{
+		"accountId": accountID,
+		"blobId":    blobID,
+		"type":      typ,
+		"name":      name,
+	})
+}
+
+const maxJSONBody = 32 << 20
+
+func readJSONBody(r io.Reader) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, maxJSONBody+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxJSONBody {
+		return nil, fmt.Errorf("jmap: response body exceeds %d bytes", maxJSONBody)
+	}
+	return data, nil
 }
 
 // Download downloads binary data by its Blob ID from the server.
@@ -363,19 +472,12 @@ func (c *Client) Download(ctx context.Context, accountID ID, blobID ID, opts Dow
 		c.Lock()
 	}
 
-	urlRepl := strings.NewReplacer(
-		"{accountId}", string(accountID),
-		"{blobId}", string(blobID),
-		"{type}", typ,
-		"{name}", name,
-	)
-	tgtUrl := urlRepl.Replace(c.Session.DownloadURL)
+	tgtUrl := expandDownloadURL(c.Session.DownloadURL, string(accountID), string(blobID), typ, name)
 	c.Unlock()
 	req, err := http.NewRequestWithContext(ctx, "GET", tgtUrl, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", c.userAgent())
 
 	resp, err := c.httpClient().Do(req)
@@ -391,15 +493,29 @@ func (c *Client) Download(ctx context.Context, accountID ID, blobID ID, opts Dow
 }
 
 func decodeHttpError(resp *http.Response) error {
+	const maxBody = 4096
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxBody+1))
+	truncated := len(body) > maxBody
+	if truncated {
+		body = body[:maxBody]
+	}
 	mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if mt == "application/problem+json" || mt == "application/json" {
 		var re RequestError
-		if err := jsonv2.UnmarshalRead(resp.Body, &re); err == nil && re.Type != "" {
+		if err := jsonv2.Unmarshal(body, &re); err == nil {
+			if re.Type == "" {
+				re.Type = "about:blank"
+			}
 			re.Status = resp.StatusCode
 			return &re
 		}
 	}
-	return fmt.Errorf("HTTP %s", resp.Status)
+	return &HTTPError{
+		Status:      resp.StatusCode,
+		StatusText:  resp.Status,
+		Body:        strings.TrimSpace(string(body)),
+		ContentType: mt,
+	}
 }
 
 // UploadResponse is the object returned in response to blob upload.

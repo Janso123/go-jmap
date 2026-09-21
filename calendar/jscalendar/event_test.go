@@ -1,12 +1,24 @@
 package jscalendar
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestEventExtraRoundTrip(t *testing.T) {
+	const input = `{"@type":"Event","uid":"u1","x-unknown":1}`
+	var ev Event
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &ev))
+	require.Equal(t, "u1", ev.UID)
+	_, ok := ev.Extra["x-unknown"]
+	require.True(t, ok)
+	out, err := jsonv2.Marshal(ev)
+	require.NoError(t, err)
+	require.JSONEq(t, input, string(out))
+}
 
 func TestEventRoundTripMinimal(t *testing.T) {
 	const input = `{
@@ -19,9 +31,9 @@ func TestEventRoundTripMinimal(t *testing.T) {
 	}`
 
 	var event Event
-	require.NoError(t, json.Unmarshal([]byte(input), &event))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &event))
 
-	data, err := json.Marshal(&event)
+	data, err := jsonv2.Marshal(&event)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
 }
@@ -70,9 +82,9 @@ func TestEventRoundTripNestedMaps(t *testing.T) {
 	}`
 
 	var event Event
-	require.NoError(t, json.Unmarshal([]byte(input), &event))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &event))
 
-	data, err := json.Marshal(&event)
+	data, err := jsonv2.Marshal(&event)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
 }
@@ -94,9 +106,26 @@ func TestEventRoundTripVendorExtensions(t *testing.T) {
 	}`
 
 	var event Event
-	require.NoError(t, json.Unmarshal([]byte(input), &event))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &event))
 
-	data, err := json.Marshal(&event)
+	data, err := jsonv2.Marshal(&event)
 	require.NoError(t, err)
 	assert.JSONEq(t, input, string(data))
+}
+
+func TestLinkDisplayIsStringBooleanMap(t *testing.T) {
+	const input = `{"@type":"Event","uid":"u1","links":{"l1":{"@type":"Link","href":"https://x/i.png","rel":"icon","display":{"badge":true}}}}`
+	var ev Event
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &ev))
+	require.Equal(t, true, ev.Links["l1"].Display["badge"])
+	out, err := jsonv2.Marshal(ev)
+	require.NoError(t, err)
+	require.JSONEq(t, input, string(out))
+}
+
+func TestEventPrivacyAndFreeBusy(t *testing.T) {
+	ev := Event{Type: "Event", UID: "u1", Privacy: PrivacyPrivate, FreeBusyStatus: FreeBusyBusy, Priority: 5}
+	b, err := jsonv2.Marshal(ev)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"@type":"Event","uid":"u1","priority":5,"freeBusyStatus":"busy","privacy":"private"}`, string(b))
 }

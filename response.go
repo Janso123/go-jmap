@@ -6,7 +6,7 @@ type Response struct {
 	Responses []*Invocation `json:"methodResponses"`
 
 	// A map of client-specified ID to server-assigned ID
-	CreatedIDs map[ID]ID `json:"createdIds,omitempty"`
+	CreatedIDs map[ID]ID `json:"createdIds,omitzero"`
 
 	// SessionState is the current state of the Session
 	SessionState string `json:"sessionState"`

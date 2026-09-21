@@ -10,4 +10,5 @@ const (
 	KeywordPhishing  = "$phishing"
 	KeywordJunk      = "$junk"
 	KeywordNotJunk   = "$notjunk"
+	KeywordMDNSent   = "$mdnsent"
 )

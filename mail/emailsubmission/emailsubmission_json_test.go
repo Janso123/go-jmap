@@ -2,6 +2,7 @@ package emailsubmission_test
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 	"time"
 
@@ -21,9 +22,11 @@ func TestEmailSubmissionMethodNames(t *testing.T) {
 }
 
 func TestEmailSubmissionRequires(t *testing.T) {
-	want := []jmap.URI{emailsubmission.URI, mail.URI}
-	require.Equal(t, want, (&emailsubmission.Get{}).Requires())
-	require.Equal(t, want, (&emailsubmission.Set{}).Requires())
+	require.Equal(t, []jmap.URI{emailsubmission.URI}, (&emailsubmission.Get{}).Requires())
+	require.Equal(t, []jmap.URI{emailsubmission.URI}, (&emailsubmission.Set{}).Requires())
+	require.Equal(t, []jmap.URI{emailsubmission.URI, mail.URI}, (&emailsubmission.Set{
+		OnSuccessDestroyEmail: []jmap.ID{"e1"},
+	}).Requires())
 }
 
 func TestEmailSubmissionJSONRoundTrip(t *testing.T) {
@@ -39,7 +42,7 @@ func TestEmailSubmissionJSONRoundTrip(t *testing.T) {
 				{Email: "to@example.com"},
 			},
 		},
-		SendAt:     &sendAt,
+		SendAt:     jmap.UTCDatePtr(sendAt),
 		UndoStatus: emailsubmission.UndoPending,
 		DeliveryStatus: map[string]*emailsubmission.DeliveryStatus{
 			"to@example.com": {
@@ -84,13 +87,24 @@ func TestEmailSubmissionJSONRoundTrip(t *testing.T) {
 	require.Equal(t, sub.UndoStatus, got.UndoStatus)
 	require.Equal(t, sub.Envelope.MailFrom.Email, got.Envelope.MailFrom.Email)
 	require.Equal(t, sub.DeliveryStatus["to@example.com"].Delivered, got.DeliveryStatus["to@example.com"].Delivered)
-	require.Equal(t, sendAt.UTC(), got.SendAt.UTC())
+	require.Equal(t, sendAt.UTC(), time.Time(*got.SendAt).UTC())
+}
+
+func TestSendAtAlwaysZDoesNotMutate(t *testing.T) {
+	loc := time.FixedZone("CEST", 2*3600)
+	tm := time.Date(2026, 9, 21, 1, 0, 0, 0, loc)
+	s := &emailsubmission.EmailSubmission{SendAt: jmap.UTCDatePtr(tm)}
+	orig := *s.SendAt
+	b, err := jsonv2.Marshal(s)
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"sendAt":"2026-09-20T23:00:00Z"`)
+	require.Equal(t, orig, *s.SendAt)
 }
 
 func TestEmailSubmissionSendAtUTC(t *testing.T) {
 	loc := time.FixedZone("CEST", 2*3600)
 	sendAt := time.Date(2026, 9, 21, 14, 0, 0, 0, loc)
-	sub := emailsubmission.EmailSubmission{SendAt: &sendAt}
+	sub := emailsubmission.EmailSubmission{SendAt: jmap.UTCDatePtr(sendAt)}
 
 	data, err := json.Marshal(&sub)
 	require.NoError(t, err)
@@ -106,4 +120,15 @@ func TestEmailSubmissionGetResponseRegistered(t *testing.T) {
 	require.Len(t, resp.Responses, 1)
 	_, ok := resp.Responses[0].Args.(*emailsubmission.GetResponse)
 	require.True(t, ok)
+}
+
+func TestEmptyMailFromOnWire(t *testing.T) {
+	t.Parallel()
+	env := emailsubmission.Envelope{
+		MailFrom: &emailsubmission.Address{Email: ""},
+		RcptTo:   []*emailsubmission.Address{{Email: "a@b.c"}},
+	}
+	b, err := jsonv2.Marshal(env)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"mailFrom":{"email":""},"rcptTo":[{"email":"a@b.c"}]}`, string(b))
 }

@@ -7,22 +7,10 @@ import "github.com/Janso123/go-jmap"
 type Query struct {
 	jmap.Query[ShareNotification]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 }
 
 // QueryResponse is the result of ShareNotification/query.
 type QueryResponse = jmap.QueryResponse
-
-type SortComparator struct {
-	// The name of the property on the ShareNotification objects to compare.
-	Property string `json:"property,omitempty"`
-
-	// If true, sort in ascending order.
-	IsAscending bool `json:"isAscending"`
-
-	// The identifier, as registered in the collation registry defined in
-	// RFC4790, for the algorithm to use when comparing the order of strings.
-	Collation jmap.CollationAlgo `json:"collation,omitempty"`
-}

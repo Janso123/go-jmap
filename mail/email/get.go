@@ -18,5 +18,9 @@ type Get struct {
 	MaxBodyValueBytes uint64 `json:"maxBodyValueBytes,omitzero"`
 }
 
+func (g *Get) Requires() []jmap.URI {
+	return mailRequires(propertiesNeedSMIME(g.Properties))
+}
+
 // GetResponse is the result of Email/get.
 type GetResponse = jmap.GetResponse[Email]

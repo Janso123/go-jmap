@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -13,7 +14,7 @@ import (
 
 func TestMarshalWSRequest(t *testing.T) {
 	req := &jmap.Request{}
-	req.Invoke(&core.Echo{Hello: "world"})
+	req.Invoke(core.Echo{"hello": "world"})
 	raw, err := marshalRequest("R1", req)
 	require.NoError(t, err)
 	var m map[string]any
@@ -25,16 +26,22 @@ func TestMarshalWSRequest(t *testing.T) {
 }
 
 func TestMarshalPushEnableDisable(t *testing.T) {
-	en, err := json.Marshal(PushEnable{
+	types := []jmap.EventType{"Email", "Mailbox"}
+	en, err := jsonv2.Marshal(PushEnable{
 		Type:      "WebSocketPushEnable",
-		DataTypes: []jmap.EventType{"Email", "Mailbox"},
+		DataTypes: &types,
 		PushState: "aaa",
 	})
 	require.NoError(t, err)
 	assert.Contains(t, string(en), `"WebSocketPushEnable"`)
 	assert.Contains(t, string(en), `"pushState":"aaa"`)
 
-	dis, err := json.Marshal(PushDisable{Type: "WebSocketPushDisable"})
+	nilEn, err := jsonv2.Marshal(pushEnableFrame(nil, ""))
+	require.NoError(t, err)
+	require.Contains(t, string(nilEn), `"dataTypes":null`)
+	require.NotContains(t, string(nilEn), `"dataTypes":[]`)
+
+	dis, err := jsonv2.Marshal(PushDisable{Type: "WebSocketPushDisable"})
 	require.NoError(t, err)
 	assert.Contains(t, string(dis), `"WebSocketPushDisable"`)
 }
@@ -56,11 +63,13 @@ func TestDecodeServerFrames(t *testing.T) {
 	assert.Equal(t, "p2", fr.StateChange.PushState)
 	assert.Equal(t, "1", fr.StateChange.Changed["a"]["Email"])
 
-	errRaw := `{"@type":"RequestError","requestId":"R2","type":"urn:ietf:params:jmap:error:notJSON","status":400,"detail":"bad"}`
+	errRaw := `{"@type":"RequestError","requestId":"R2","type":"urn:ietf:params:jmap:error:notJSON","status":400,"title":"Bad","detail":"bad"}`
 	fr, err = decodeServerFrame([]byte(errRaw))
 	require.NoError(t, err)
 	require.NotNil(t, fr.RequestError)
 	assert.Equal(t, "R2", fr.RequestID)
+	assert.Equal(t, "R2", fr.RequestError.RequestID)
+	assert.Equal(t, "Bad", fr.RequestError.Title)
 	assert.Equal(t, 400, fr.RequestError.Status)
 	assert.Equal(t, "bad", fr.RequestError.Detail)
 

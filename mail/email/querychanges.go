@@ -7,11 +7,15 @@ import "github.com/Janso123/go-jmap"
 type QueryChanges struct {
 	jmap.QueryChanges[Email]
 
-	Filter Filter `json:"filter,omitzero"`
+	Filter jmap.Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitzero"`
+	Sort []*jmap.Comparator `json:"sort,omitzero"`
 
 	CollapseThreads bool `json:"collapseThreads,omitzero"`
+}
+
+func (q *QueryChanges) Requires() []jmap.URI {
+	return mailRequires(filterNeedsSMIME(q.Filter))
 }
 
 // QueryChangesResponse is the result of Email/queryChanges.

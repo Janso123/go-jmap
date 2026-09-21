@@ -2,24 +2,16 @@ package sieve
 
 import "github.com/Janso123/go-jmap"
 
-type Filter interface {
-	implementsFilter()
-}
-
-type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
-
-	Conditions []Filter `json:"conditions,omitempty"`
-}
-
-func (fo *FilterOperator) implementsFilter() {}
-
 // Filter criteria for Sieve script queries.
 // https://www.rfc-editor.org/rfc/rfc9661.html#section-2.5
 type FilterCondition struct {
-	Name string `json:"name,omitempty"`
+	jmap.FilterBase `json:"-"`
 
-	IsActive *bool `json:"isActive,omitempty"`
+	Name string `json:"name,omitzero"`
+
+	IsActive *bool `json:"isActive,omitzero"`
 }
 
-func (fc *FilterCondition) implementsFilter() {}
+func And(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.And(conds...) }
+func Or(conds ...jmap.Filter) *jmap.FilterOperator  { return jmap.Or(conds...) }
+func Not(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.Not(conds...) }

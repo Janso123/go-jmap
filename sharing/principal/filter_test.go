@@ -25,13 +25,10 @@ func TestFilterConditionMarshal(t *testing.T) {
 }
 
 func TestFilterOperatorMarshal(t *testing.T) {
-	data, err := json.Marshal(&FilterOperator{
-		Operator: jmap.OperatorAND,
-		Conditions: []Filter{
-			&FilterCondition{Name: "Jane Doe"},
-			&FilterCondition{Type: TypeGroup},
-		},
-	})
+	data, err := json.Marshal(And(
+		&FilterCondition{Name: "Jane Doe"},
+		&FilterCondition{Type: TypeGroup},
+	))
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"operator":"AND","conditions":[{"name":"Jane Doe"},{"type":"group"}]}`,
