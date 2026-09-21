@@ -231,6 +231,17 @@ go test -race -count=1 ./...
 go test ./... -cover   # package statement coverage
 ```
 
+CI runs the same race tests on pushes/PRs to `main`.
+
+## Releasing
+
+Push a version tag (`vX.Y.Z` or prerelease like `v1.0.0-alpha.1`). The [release workflow](.github/workflows/release.yml) runs tests, then creates a GitHub Release with auto-generated notes (tags containing `alpha` / `beta` / `rc` are marked prerelease).
+
+```bash
+git tag v1.0.0-alpha.2
+git push origin v1.0.0-alpha.2
+```
+
 ## License
 
 [MIT](LICENSE) — SPDX: `MIT`.
