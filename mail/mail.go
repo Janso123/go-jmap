@@ -5,7 +5,7 @@ package mail
 import (
 	"fmt"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 // urn:ietf:params:jmap:mail represents support for the Mailbox, Thread, Email,
@@ -42,15 +42,15 @@ func init() {
 }
 
 type Mail struct {
-	MaxMailboxesPerEmail       uint64 `json:"maxMailboxesPerEmail"`
-	MaxMailboxDepth            uint64 `json:"maxMailboxDepth"`
-	MaxSizeMailboxName         uint64 `json:"maxSizeMailboxName"`
-	MaxSizeAttachmentsPerEmail uint64 `json:"maxSizeAttachmentsPerEmail"`
+	MaxMailboxesPerEmail       *uint64 `json:"maxMailboxesPerEmail,omitzero"`
+	MaxMailboxDepth            *uint64 `json:"maxMailboxDepth,omitzero"`
+	MaxSizeMailboxName         uint64  `json:"maxSizeMailboxName,omitzero"`
+	MaxSizeAttachmentsPerEmail uint64  `json:"maxSizeAttachmentsPerEmail,omitzero"`
 
 	// A list of all values the server supports for sorting
-	EmailQuerySortOptions []string `json:"emailQuerySortOptions"`
+	EmailQuerySortOptions []string `json:"emailQuerySortOptions,omitzero"`
 
-	MayCreateTopLevelMailbox bool `json:"mayCreateTopLevelMailbox"`
+	MayCreateTopLevelMailbox bool `json:"mayCreateTopLevelMailbox,omitzero"`
 }
 
 func (m *Mail) URI() jmap.URI { return URI }
@@ -59,8 +59,8 @@ func (m *Mail) New() jmap.Capability { return &Mail{} }
 
 // An Email address
 type Address struct {
-	Name  string `json:"name,omitempty"`
-	Email string `json:"email,omitempty"`
+	Name  string `json:"name,omitzero"`
+	Email string `json:"email"`
 }
 
 func (a *Address) String() string {

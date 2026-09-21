@@ -1,0 +1,28 @@
+package jmap
+
+import "time"
+
+// Bool returns a pointer to v for optional boolean JSON fields.
+//
+//go:fix inline
+func Bool(v bool) *bool { return new(v) }
+
+// IDPtr returns a pointer to id for optional ID JSON fields.
+//
+//go:fix inline
+func IDPtr(id ID) *ID { return new(id) }
+
+// UTCDatePtr returns a pointer to a UTCDate for optional date JSON fields.
+func UTCDatePtr(t time.Time) *UTCDate {
+	d := UTCDate(t)
+	return &d
+}
+
+// DatePtr returns a pointer to a Date for optional RFC 8620 Date fields.
+func DatePtr(t time.Time) *Date {
+	d := Date(t)
+	return &d
+}
+
+// Uint64Ptr returns a pointer to n for optional UnsignedInt JSON fields.
+func Uint64Ptr(n uint64) *uint64 { return new(n) }

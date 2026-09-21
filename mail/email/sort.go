@@ -1,15 +1,23 @@
 package email
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
-// Email sort criteria
-// https://www.rfc-editor.org/rfc/rfc8621.html#section-4.4.2
-type SortComparator struct {
-	Property string `json:"property,omitempty"`
+// Email sort property constants (RFC 8621 §4.4.2).
+const (
+	SortReceivedAt              = "receivedAt"
+	SortSize                    = "size"
+	SortFrom                    = "from"
+	SortTo                      = "to"
+	SortSubject                 = "subject"
+	SortSentAt                  = "sentAt"
+	SortHasKeyword              = "hasKeyword"
+	SortAllInThreadHaveKeyword  = "allInThreadHaveKeyword"
+	SortSomeInThreadHaveKeyword = "someInThreadHaveKeyword"
+)
 
-	Keyword string `json:"keyword,omitempty"`
+func Asc(prop string) *jmap.Comparator  { return jmap.Asc(prop) }
+func Desc(prop string) *jmap.Comparator { return jmap.Desc(prop) }
 
-	IsAscending bool `json:"isAscending"`
-
-	Collation jmap.CollationAlgo `json:"collation,omitempty"`
+func ByKeyword(kw string, ascending bool) *jmap.Comparator {
+	return &jmap.Comparator{Property: SortHasKeyword, Keyword: kw, IsAscending: ascending}
 }

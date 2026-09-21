@@ -1,31 +1,30 @@
 package mailbox
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
-type Filter interface {
-	implementsFilter()
-}
-
-type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
-
-	Conditions []Filter `json:"conditions,omitempty"`
-}
-
-func (fo *FilterOperator) implementsFilter() {}
-
-// Filter criteria for mailbox queries
-// https://www.rfc-editor.org/rfc/rfc8621.html#section-2.3
 type FilterCondition struct {
-	ParentID jmap.ID `json:"parentId,omitempty"`
+	jmap.FilterBase `json:"-"`
 
-	Name string `json:"name,omitempty"`
+	ParentID jmap.Optional[jmap.ID] `json:"parentId,omitzero"`
 
-	Role Role `json:"role,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	HasAnyRole bool `json:"hasAnyRole,omitempty"`
+	Role jmap.Optional[Role] `json:"role,omitzero"`
 
-	IsSubscribed bool `json:"isSubscribed,omitempty"`
+	HasAnyRole *bool `json:"hasAnyRole,omitzero"`
+
+	IsSubscribed *bool `json:"isSubscribed,omitzero"`
 }
 
-func (fc *FilterCondition) implementsFilter() {}
+func And(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.And(conds...) }
+func Or(conds ...jmap.Filter) *jmap.FilterOperator  { return jmap.Or(conds...) }
+func Not(conds ...jmap.Filter) *jmap.FilterOperator { return jmap.Not(conds...) }
+
+// TopLevel matches mailboxes whose parentId is JSON null.
+func TopLevel() *FilterCondition {
+	return &FilterCondition{ParentID: jmap.Null[jmap.ID]()}
+}
+
+func Parent(id jmap.ID) *FilterCondition {
+	return &FilterCondition{ParentID: jmap.Some(id)}
+}

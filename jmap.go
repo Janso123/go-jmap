@@ -3,9 +3,11 @@
 package jmap
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"regexp"
+	"uuid"
 )
 
 func init() {
@@ -18,31 +20,38 @@ type URI string
 // ID is a unique identifier assigned by the server
 type ID string
 
-var idRegexp = regexp.MustCompile(`^[A-Za-z0-9\-_]+$`)
+var idRegexp = regexp.MustCompile(`^[A-Za-z0-9\-_]{1,255}$`)
 
 // Valid checks to make sure that the given ID is valid according to the
 // specification.
 func (id ID) Valid() (bool, error) {
-	if len(string(id)) < 1 {
+	if id == "" {
 		return false, fmt.Errorf("invalid ID: too short")
 	}
-	if len(string(id)) > 255 {
-		return false, fmt.Errorf("invalid ID: too long")
+	if !idRegexp.MatchString(string(id)) {
+		return false, fmt.Errorf("invalid ID: bad charset")
 	}
-
 	return true, nil
 }
 
+// MarshalJSON keeps encoding/json callers working; json/v2 prefers MarshalJSONTo.
 func (id ID) MarshalJSON() ([]byte, error) {
-	if _, err := id.Valid(); err != nil {
-		return nil, err
-	}
-	return json.Marshal(string(id))
+	return jsonv2.Marshal(id)
+}
+
+func (id ID) MarshalJSONTo(enc *jsontext.Encoder) error {
+	// Empty ID is valid JSON string ""; callers use omitzero to skip fields.
+	return jsonv2.MarshalEncode(enc, string(id))
+}
+
+// NewCreationID returns a client-generated creation id (RFC 8620).
+func NewCreationID() ID {
+	return ID(uuid.New().String())
 }
 
 // Patch is a JMAP patch object which can be used in set.Update calls. The keys
 // are json pointer paths, and the value is the value to set the path to.
-type Patch map[string]interface{}
+type Patch map[string]any
 
 // Operator is used when constructing FilterOperator. It MUST be "AND", "OR", or
 // "NOT"

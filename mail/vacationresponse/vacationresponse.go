@@ -1,18 +1,14 @@
 package vacationresponse
 
 import (
-	"encoding/json"
-	"time"
-
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 const URI jmap.URI = "urn:ietf:params:jmap:vacationresponse"
 
 func init() {
 	jmap.RegisterCapability(&Capability{})
-	jmap.RegisterMethod("VacationResponse/get", newGetResponse)
-	jmap.RegisterMethod("VacationResponse/set", newSetResponse)
+	jmap.RegisterObject[VacationResponse](jmap.MethodGet | jmap.MethodSet)
 }
 
 // The VacationResponse capability is an empty object
@@ -25,30 +21,23 @@ func (m *Capability) New() jmap.Capability { return &Capability{} }
 // Automatic reply when a message is delivered to the mail store
 // https://www.rfc-editor.org/rfc/rfc8621.html#section-8
 type VacationResponse struct {
-	ID string `json:"id,omitempty"`
+	ID string `json:"id,omitzero"`
 
-	IsEnabled bool `json:"isEnabled,omitempty"`
+	IsEnabled *bool `json:"isEnabled,omitzero"`
 
-	FromDate *time.Time `json:"fromDate,omitempty"`
+	FromDate *jmap.UTCDate `json:"fromDate,omitzero"`
 
-	ToDate *time.Time `json:"toDate,omitempty"`
+	ToDate *jmap.UTCDate `json:"toDate,omitzero"`
 
-	Subject *string `json:"subject,omitempty"`
+	Subject *string `json:"subject,omitzero"`
 
-	TextBody *string `json:"textBody,omitempty"`
+	TextBody *string `json:"textBody,omitzero"`
 
-	HTMLBody *string `json:"htmlBody,omitempty"`
+	HTMLBody *string `json:"htmlBody,omitzero"`
 }
 
-func (v *VacationResponse) MarshalJson() ([]byte, error) {
-	if v.FromDate != nil && v.FromDate.Location() != time.UTC {
-		utc := v.FromDate.UTC()
-		v.FromDate = &utc
-	}
-	if v.ToDate != nil && v.ToDate.Location() != time.UTC {
-		utc := v.ToDate.UTC()
-		v.ToDate = &utc
-	}
-	type Alias VacationResponse
-	return json.Marshal((*Alias)(v))
+func (VacationResponse) JMAPType() string { return "VacationResponse" }
+
+func (VacationResponse) Requires() []jmap.URI {
+	return []jmap.URI{URI}
 }

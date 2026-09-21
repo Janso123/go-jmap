@@ -92,7 +92,7 @@ func TestSessionMarshal(t *testing.T) {
 	assert.NoError(err)
 
 	// We can't just compare []byte because order of fields may be different.
-	var original, remarshaled map[string]interface{}
+	var original, remarshaled map[string]any
 	err = json.Unmarshal([]byte(sessionBlob), &original)
 	assert.NoError(err)
 	err = json.Unmarshal(blob, &remarshaled)

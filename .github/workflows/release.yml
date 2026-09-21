@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - name: vet
+        run: go vet ./...
+      - name: test
+        run: go test -race -count=1 ./...
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; skipping."
+            exit 0
+          fi
+
+          PRERELEASE_ARGS=()
+          case "$TAG" in
+            *alpha*|*beta*|*rc*) PRERELEASE_ARGS=(--prerelease) ;;
+          esac
+
+          PREV="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          {
+            echo "## Changes"
+            echo
+            if [ -n "$PREV" ]; then
+              echo "Compared to \`$PREV\`:"
+              echo
+              git log --pretty=format:'- %s (%h)' "${PREV}..${TAG}"
+              echo
+            else
+              echo "First tagged release — no previous tag to diff against."
+              echo
+              git log --pretty=format:'- %s (%h)' "$TAG"
+              echo
+            fi
+          } > /tmp/release-notes.md
+
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file /tmp/release-notes.md \
+            --generate-notes \
+            "${PRERELEASE_ARGS[@]}"

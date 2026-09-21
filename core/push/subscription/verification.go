@@ -4,11 +4,11 @@ package subscription
 // URL.
 type Verification struct {
 	// The MUST be "PushVerification"
-	Type string `json:"@type,omitempty"`
+	Type string `json:"@type,omitzero"`
 
 	// The ID of the Push Subscription that was created
-	SubscriptionID string `json:"pushSubscriptionId,omitempty"`
+	SubscriptionID string `json:"pushSubscriptionId,omitzero"`
 
 	// The verification code to add to the subscription
-	Code string `json:"verificationCode,omitempty"`
+	Code string `json:"verificationCode,omitzero"`
 }

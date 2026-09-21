@@ -1,14 +1,15 @@
 package jmap
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 )
 
 type Session struct {
 	// Capabilities specifies the capabililities the server has.
 	Capabilities map[URI]Capability `json:"-"`
 
-	RawCapabilities map[URI]json.RawMessage `json:"capabilities"`
+	RawCapabilities map[URI]jsontext.Value `json:"capabilities"`
 
 	Accounts map[ID]Account `json:"accounts"`
 
@@ -38,23 +39,34 @@ type Session struct {
 type session Session
 
 func (s *Session) UnmarshalJSON(data []byte) error {
+	return jsonv2.Unmarshal(data, s)
+}
+
+func (s *Session) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	raw := (*session)(s)
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := jsonv2.UnmarshalDecode(dec, &raw); err != nil {
 		return err
 	}
 
 	s.Capabilities = make(map[URI]Capability)
-	for key, cap := range capabilities {
+	var decodeErr error
+	rangeCapabilities(func(key URI, cap Capability) {
+		if decodeErr != nil {
+			return
+		}
 		rawCap, ok := raw.RawCapabilities[key]
 		if !ok {
-			continue
+			return
 		}
 		newCap := cap.New()
-		err := json.Unmarshal(rawCap, newCap)
-		if err != nil {
-			return err
+		if err := jsonv2.Unmarshal(rawCap, newCap); err != nil {
+			decodeErr = err
+			return
 		}
 		s.Capabilities[key] = newCap
+	})
+	if decodeErr != nil {
+		return decodeErr
 	}
 
 	return nil

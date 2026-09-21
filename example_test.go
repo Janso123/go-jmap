@@ -1,13 +1,15 @@
 package jmap_test
 
 import (
+	"context"
 	"fmt"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/core/push"
-	"git.sr.ht/~rockorager/go-jmap/mail"
-	"git.sr.ht/~rockorager/go-jmap/mail/email"
-	"git.sr.ht/~rockorager/go-jmap/mail/mailbox"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/core/push"
+	"github.com/Janso123/go-jmap/core/push/websocket"
+	"github.com/Janso123/go-jmap/mail"
+	"github.com/Janso123/go-jmap/mail/email"
+	"github.com/Janso123/go-jmap/mail/mailbox"
 )
 
 // Basic usage of the client, with chaining of methods
@@ -26,12 +28,15 @@ func Example() {
 	// decide when to refresh. The client can be initialized with a cached
 	// Session object. If one isn't available, the first request will also
 	// authenticate the client
-	if err := client.Authenticate(); err != nil {
+	if err := client.Authenticate(context.Background()); err != nil {
 		// Handle the error
 	}
 
 	// Get the account ID of the primary mail account
-	id := client.Session.PrimaryAccounts[mail.URI]
+	id, err := client.PrimaryAccount(mail.URI)
+	if err != nil {
+		// Handle the error
+	}
 
 	// Create a new request
 	req := &jmap.Request{}
@@ -60,7 +65,7 @@ func Example() {
 	})
 
 	// Make the request
-	resp, err := client.Do(req)
+	resp, err := client.Do(context.Background(), req)
 	if err != nil {
 		// Handle the error
 	}
@@ -103,8 +108,44 @@ func Example_eventsource() {
 		Client:  client,
 		Handler: myHandlerFunc,
 	}
-	if err := stream.Listen(); err != nil {
-		// error occurs if the stream couldn't connect. Listen will
-		// return when stream.Close is called
+	if err := stream.Listen(context.Background()); err != nil {
+		// io.EOF on clean close; ErrClosed if stream.Close is called
 	}
+}
+
+// Example usage of a JMAP-over-WebSocket connection (RFC 8887).
+func Example_websocket() {
+	client := &jmap.Client{
+		SessionEndpoint: "https://api.fastmail.com/jmap/session",
+	}
+	client.WithAccessToken("my-access-token")
+	if err := client.Authenticate(context.Background()); err != nil {
+		// handle
+	}
+
+	ctx := context.Background()
+	conn, err := websocket.Dial(ctx, client)
+	if err != nil {
+		// handle — e.g. fall back to EventSource
+	}
+	defer conn.Close()
+
+	conn.SetHandler(func(change *jmap.StateChange) {
+		// handle push
+	})
+	_ = conn.EnablePush(nil, "") // all data types
+
+	req := &jmap.Request{}
+	acct, err := client.PrimaryAccount(mail.URI)
+	if err != nil {
+		// handle
+	}
+	req.Invoke(&mailbox.Get{
+		Account: acct,
+	})
+	resp, err := conn.Do(ctx, req)
+	if err != nil {
+		// handle
+	}
+	_ = resp
 }

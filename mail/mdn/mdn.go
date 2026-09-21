@@ -1,6 +1,6 @@
 package mdn
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 const URI jmap.URI = "urn:ietf:params:jmap:mdn"
 
@@ -20,46 +20,58 @@ func (m *Capability) New() jmap.Capability { return &Capability{} }
 // A Message Delivery Notification (MDN) object
 // https://www.rfc-editor.org/rfc/rfc9007.html#section-2
 type MDN struct {
-	ForEmailID jmap.ID `json:"forEmailId,omitempty"`
+	ForEmailID jmap.ID `json:"forEmailId,omitzero"`
 
-	Subject string `json:"subject,omitempty"`
+	Subject string `json:"subject,omitzero"`
 
-	TextBody string `json:"textBody,omitempty"`
+	TextBody string `json:"textBody,omitzero"`
 
-	IncludeOriginalmessage bool `json:"includeOriginalMessage,omitempty"`
+	IncludeOriginalmessage bool `json:"includeOriginalMessage,omitzero"`
 
-	ReportingUA string `json:"reportinUA,omitempty"`
+	ReportingUA string `json:"reportingUA,omitzero"`
 
-	Disposition *Disposition `json:"disposition,omitempty"`
+	Disposition *Disposition `json:"disposition,omitzero"`
 
-	MDNGateway string `json:"mdnGateway,omitempty"`
+	MDNGateway string `json:"mdnGateway,omitzero"`
 
-	OriginalRecipient string `json:"originalRecipient,omitempty"`
+	OriginalRecipient string `json:"originalRecipient,omitzero"`
 
-	FinalRecipient string `json:"finalRecipient,omitempty"`
+	FinalRecipient string `json:"finalRecipient,omitzero"`
 
-	OriginalMessageID string `json:"originalMessageId,omitempty"`
+	OriginalMessageID string `json:"originalMessageId,omitzero"`
 
-	Error []string `json:"error,omitempty"`
+	Error []string `json:"error,omitzero"`
 
-	ExtensionFields map[string]string `json:"extensionFields,omitempty"`
+	ExtensionFields map[string]string `json:"extensionFields,omitzero"`
 }
 
+type ActionMode string
+
+const (
+	ActionManual    ActionMode = "manual-action"
+	ActionAutomatic ActionMode = "automatic-action"
+)
+
+type SendingMode string
+
+const (
+	SendingManual    SendingMode = "mdn-sent-manually"
+	SendingAutomatic SendingMode = "mdn-sent-automatically"
+)
+
+type DispositionType string
+
+const (
+	DispositionDeleted    DispositionType = "deleted"
+	DispositionDispatched DispositionType = "dispatched"
+	DispositionDisplayed  DispositionType = "displayed"
+	DispositionProcessed  DispositionType = "processed"
+)
+
 type Disposition struct {
-	// This MUST be one of the following strings:
-	// - "manual-action"
-	// - "automatic-action"
-	ActionMode string `json:"actionMode,omitempty"`
+	ActionMode ActionMode `json:"actionMode,omitzero"`
 
-	// This MUST be one of the following strings:
-	// - "mdn-sent-manually"
-	// - "mdn-sent-automatically"
-	SendingMode string `json:"sendingMode,omitempty"`
+	SendingMode SendingMode `json:"sendingMode,omitzero"`
 
-	// This MUST be one of the following strings:
-	// - "deleted"
-	// - "dispatched"
-	// - "displayed"
-	// - "processed"
-	Type string `json:"type,omitempty"`
+	Type DispositionType `json:"type,omitzero"`
 }
