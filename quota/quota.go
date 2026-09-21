@@ -1,6 +1,6 @@
 package quota
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 // urn:ietf:params:jmap:quota represents support for the Quota data type and
 // associated API methods.
@@ -13,6 +13,14 @@ const (
 
 func init() {
 	jmap.RegisterCapability(&Capability{})
+	jmap.RegisterObject[Quota](
+		jmap.MethodGet |
+			jmap.MethodChanges |
+			jmap.MethodQuery |
+			jmap.MethodQueryChanges,
+	)
+	// Quota/changes includes updatedProperties; override kit factory.
+	jmap.RegisterMethod("Quota/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 // Capability broadcasts support for quota methods.
@@ -24,23 +32,27 @@ func (c *Capability) New() jmap.Capability { return &Capability{} }
 
 // Quota describes quota usage and limits for a resource.
 type Quota struct {
-	ID string `json:"id,omitempty"`
+	ID jmap.ID `json:"id,omitzero"`
 
-	ResourceType string `json:"resourceType,omitempty"`
+	ResourceType string `json:"resourceType,omitzero"`
 
-	Used uint64 `json:"used,omitempty"`
+	Used uint64 `json:"used,omitzero"`
 
-	HardLimit uint64 `json:"hardLimit,omitempty"`
+	HardLimit uint64 `json:"hardLimit,omitzero"`
 
-	Scope string `json:"scope,omitempty"`
+	Scope string `json:"scope,omitzero"`
 
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	Types []string `json:"types,omitempty"`
+	Types []string `json:"types,omitzero"`
 
-	WarnLimit uint64 `json:"warnLimit,omitempty"`
+	WarnLimit uint64 `json:"warnLimit,omitzero"`
 
-	SoftLimit uint64 `json:"softLimit,omitempty"`
+	SoftLimit uint64 `json:"softLimit,omitzero"`
 
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 }
+
+func (Quota) JMAPType() string { return "Quota" }
+
+func (Quota) Requires() []jmap.URI { return []jmap.URI{URI} }

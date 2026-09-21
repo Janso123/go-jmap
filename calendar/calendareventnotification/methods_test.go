@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -72,7 +72,7 @@ func TestQueryInvoke(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/query",{"accountId":"u1","filter":{"after":"2026-09-01T00:00:00Z","type":"updated"},"sort":[{"property":"created","isAscending":false}],"limit":10},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/query",{"accountId":"u1","limit":10,"filter":{"after":"2026-09-01T00:00:00Z","type":"updated"},"sort":[{"property":"created","isAscending":false}]},"0"]]}`,
 		string(data))
 }
 
@@ -95,7 +95,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/queryChanges",{"accountId":"u1","filter":{"type":"created"},"sort":[{"property":"created","isAscending":false}],"sinceQueryState":"q1","maxChanges":10},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":10,"filter":{"type":"created"},"sort":[{"property":"created","isAscending":false}]},"0"]]}`,
 		string(data))
 }
 

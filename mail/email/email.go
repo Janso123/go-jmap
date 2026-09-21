@@ -1,20 +1,22 @@
 package email
 
 import (
-	"time"
+	"encoding/json/jsontext"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/mail"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/mail"
 )
 
 func init() {
 	jmap.RegisterCapability(&smimeVerify{})
-	jmap.RegisterMethod("Email/get", newGetResponse)
-	jmap.RegisterMethod("Email/changes", newChangesResponse)
-	jmap.RegisterMethod("Email/query", newQueryResponse)
-	jmap.RegisterMethod("Email/queryChanges", newQueryChangesResponse)
-	jmap.RegisterMethod("Email/set", newSetResponse)
-	jmap.RegisterMethod("Email/copy", newCopyResponse)
+	jmap.RegisterObject[Email](
+		jmap.MethodGet |
+			jmap.MethodChanges |
+			jmap.MethodQuery |
+			jmap.MethodQueryChanges |
+			jmap.MethodSet |
+			jmap.MethodCopy,
+	)
 	jmap.RegisterMethod("Email/import", newImportResponse)
 	jmap.RegisterMethod("Email/parse", newParseResponse)
 }
@@ -22,109 +24,120 @@ func init() {
 // Representation of an RFC5322 message
 // https://www.rfc-editor.org/rfc/rfc8621.html#section-4
 type Email struct {
-	ID jmap.ID `json:"id,omitempty"`
+	ID jmap.ID `json:"id,omitzero"`
 
-	BlobID jmap.ID `json:"blobId,omitempty"`
+	BlobID jmap.ID `json:"blobId,omitzero"`
 
-	ThreadID jmap.ID `json:"threadId,omitempty"`
+	ThreadID jmap.ID `json:"threadId,omitzero"`
 
-	MailboxIDs map[jmap.ID]bool `json:"mailboxIds,omitempty"`
+	MailboxIDs map[jmap.ID]bool `json:"mailboxIds,omitzero"`
 
-	Keywords map[string]bool `json:"keywords,omitempty"`
+	Keywords map[string]bool `json:"keywords,omitzero"`
 
-	Size uint64 `json:"size,omitempty"`
+	Size uint64 `json:"size,omitzero"`
 
-	ReceivedAt *time.Time `json:"receivedAt,omitempty"`
+	ReceivedAt *jmap.UTCDate `json:"receivedAt,omitzero"`
 
-	Headers []*Header `json:"headers,omitempty"`
+	Headers []*Header `json:"headers,omitzero"`
 
-	MessageID []string `json:"messageId,omitempty"`
+	MessageID []string `json:"messageId,omitzero"`
 
-	InReplyTo []string `json:"inReplyTo,omitempty"`
+	InReplyTo []string `json:"inReplyTo,omitzero"`
 
-	References []string `json:"references,omitempty"`
+	References []string `json:"references,omitzero"`
 
-	Sender []*mail.Address `json:"sender,omitempty"`
+	Sender []*mail.Address `json:"sender,omitzero"`
 
-	From []*mail.Address `json:"from,omitempty"`
+	From []*mail.Address `json:"from,omitzero"`
 
-	To []*mail.Address `json:"to,omitempty"`
+	To []*mail.Address `json:"to,omitzero"`
 
-	CC []*mail.Address `json:"cc,omitempty"`
+	CC []*mail.Address `json:"cc,omitzero"`
 
-	BCC []*mail.Address `json:"bcc,omitempty"`
+	BCC []*mail.Address `json:"bcc,omitzero"`
 
-	ReplyTo []*mail.Address `json:"replyTo,omitempty"`
+	ReplyTo []*mail.Address `json:"replyTo,omitzero"`
 
-	Subject string `json:"subject,omitempty"`
+	Subject string `json:"subject,omitzero"`
 
-	SentAt *time.Time `json:"sentAt,omitempty"`
+	SentAt *jmap.UTCDate `json:"sentAt,omitzero"`
 
-	BodyStructure *BodyPart `json:"bodyStructure,omitempty"`
+	BodyStructure *BodyPart `json:"bodyStructure,omitzero"`
 
-	BodyValues map[string]*BodyValue `json:"bodyValues,omitempty"`
+	BodyValues map[string]*BodyValue `json:"bodyValues,omitzero"`
 
-	TextBody []*BodyPart `json:"textBody,omitempty"`
+	TextBody []*BodyPart `json:"textBody,omitzero"`
 
-	HTMLBody []*BodyPart `json:"htmlBody,omitempty"`
+	HTMLBody []*BodyPart `json:"htmlBody,omitzero"`
 
-	Attachments []*BodyPart `json:"attachments,omitempty"`
+	Attachments []*BodyPart `json:"attachments,omitzero"`
 
-	HasAttachment bool `json:"hasAttachment,omitempty"`
+	HasAttachment bool `json:"hasAttachment,omitzero"`
 
-	Preview string `json:"preview,omitempty"`
+	Preview string `json:"preview,omitzero"`
 
-	SMIMEStatus string `json:"smimeStatus,omitempty"`
+	SMIMEStatus string `json:"smimeStatus,omitzero"`
 
-	SMIMEStatusAtDelivery string `json:"smimeStatusAtDelivery,omitempty"`
+	SMIMEStatusAtDelivery string `json:"smimeStatusAtDelivery,omitzero"`
 
-	SMIMEErrors []string `json:"smimeErrors,omitempty"`
+	SMIMEErrors []string `json:"smimeErrors,omitzero"`
 
-	SMIMEVerifiedAt *time.Time `json:"smimeVerifiedAt,omitempty"`
+	SMIMEVerifiedAt *jmap.UTCDate `json:"smimeVerifiedAt,omitzero"`
+
+	// Extra holds header:* and other unrecognized properties (Approach A embed).
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
-type AddressGroup struct {
-	Name string `json:"name,omitempty"`
+func (Email) JMAPType() string { return "Email" }
 
-	Addresses []*mail.Address `json:"addresses,omitempty"`
+func (Email) Requires() []jmap.URI { return []jmap.URI{mail.URI} }
+
+type AddressGroup struct {
+	Name string `json:"name,omitzero"`
+
+	Addresses []*mail.Address `json:"addresses,omitzero"`
 }
 
 type Header struct {
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	Value string `json:"value,omitempty"`
+	Value string `json:"value,omitzero"`
 }
 
 type BodyPart struct {
-	PartID string `json:"partId,omitempty"`
+	PartID string `json:"partId,omitzero"`
 
-	BlobID jmap.ID `json:"blobId,omitempty"`
+	BlobID jmap.ID `json:"blobId,omitzero"`
 
-	Size uint64 `json:"size,omitempty"`
+	Size uint64 `json:"size,omitzero"`
 
-	Headers []*Header `json:"headers,omitempty"`
+	Headers []*Header `json:"headers,omitzero"`
 
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	Type string `json:"type,omitempty"`
+	Type string `json:"type,omitzero"`
 
-	Charset string `json:"charset,omitempty"`
+	Charset string `json:"charset,omitzero"`
 
-	Disposition string `json:"disposition,omitempty"`
+	Disposition string `json:"disposition,omitzero"`
 
-	CID string `json:"cid,omitempty"`
+	CID string `json:"cid,omitzero"`
 
-	Language []string `json:"language,omitempty"`
+	Language []string `json:"language,omitzero"`
 
-	Location string `json:"location,omitempty"`
+	Location string `json:"location,omitzero"`
 
-	SubParts []*BodyPart `json:"subParts,omitempty"`
+	SubParts []*BodyPart `json:"subParts,omitzero"`
+
+	// Extra holds header:* properties on body parts.
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type BodyValue struct {
-	Value string `json:"value,omitempty"`
+	Value string `json:"value,omitzero"`
 
-	IsEncodingProblem bool `json:"isEncodingProblem,omitempty"`
+	IsEncodingProblem bool `json:"isEncodingProblem,omitzero"`
 
+	// IsTruncated has no omitzero: servers/clients often need explicit false.
 	IsTruncated bool `json:"isTruncated"`
 }

@@ -2,7 +2,7 @@ package websocket
 
 import (
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/core"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/core"
 	cws "github.com/coder/websocket"
 )
 
@@ -90,7 +90,7 @@ func Dial(ctx context.Context, client *jmap.Client, opts ...Options) (*Conn, err
 	if client == nil {
 		return nil, fmt.Errorf("websocket: nil client")
 	}
-	if err := ensureSession(client); err != nil {
+	if err := ensureSession(ctx, client); err != nil {
 		return nil, err
 	}
 	cap, ok := client.Session.Capabilities[URI].(*WebSocket)
@@ -108,7 +108,7 @@ func DialURL(ctx context.Context, client *jmap.Client, wsURL string, opts ...Opt
 	if wsURL == "" {
 		return nil, fmt.Errorf("websocket: empty url")
 	}
-	if err := ensureSession(client); err != nil {
+	if err := ensureSession(ctx, client); err != nil {
 		return nil, err
 	}
 
@@ -171,17 +171,40 @@ func (c *Conn) dialUnderlying(ctx context.Context) error {
 func (c *Conn) startReadLoop() {
 	readCtx, cancel := context.WithCancel(context.Background())
 	c.mu.Lock()
+	if c.readCancel != nil {
+		c.readCancel()
+	}
 	c.readCancel = cancel
 	c.mu.Unlock()
 	go c.readLoop(readCtx)
+	if c.opts.PingInterval > 0 {
+		go c.pingLoop(readCtx)
+	}
 }
 
-func ensureSession(client *jmap.Client) error {
+func (c *Conn) pingLoop(ctx context.Context) {
+	ticker := time.NewTicker(c.opts.PingInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-c.closed:
+			return
+		case <-ticker.C:
+			pingCtx, cancel := context.WithTimeout(ctx, c.opts.PingInterval)
+			_ = c.Ping(pingCtx)
+			cancel()
+		}
+	}
+}
+
+func ensureSession(ctx context.Context, client *jmap.Client) error {
 	client.Lock()
 	needAuth := client.Session == nil
 	client.Unlock()
 	if needAuth {
-		return client.Authenticate()
+		return client.Authenticate(ctx)
 	}
 	return nil
 }
@@ -302,6 +325,19 @@ func (c *Conn) Do(ctx context.Context, req *jmap.Request) (*jmap.Response, error
 	}
 }
 
+// Ping sends a WebSocket ping and waits for a pong (RFC 6455).
+// Must be used while the connection read loop is running.
+func (c *Conn) Ping(ctx context.Context) error {
+	c.mu.Lock()
+	ws := c.ws
+	userClosed := c.userClosed
+	c.mu.Unlock()
+	if userClosed || ws == nil {
+		return fmt.Errorf("websocket: connection closed")
+	}
+	return ws.Ping(ctx)
+}
+
 // Close performs a normal WebSocket close handshake, cancels in-flight Do calls,
 // and disables auto-reconnect.
 func (c *Conn) Close() error {
@@ -328,7 +364,7 @@ func (c *Conn) Close() error {
 }
 
 func (c *Conn) writeJSON(v interface{}) error {
-	raw, err := json.Marshal(v)
+	raw, err := jsonv2.Marshal(v)
 	if err != nil {
 		return err
 	}
@@ -366,6 +402,17 @@ func (c *Conn) readLoop(ctx context.Context) {
 		}
 		fr, err := decodeServerFrame(data)
 		if err != nil {
+			if c.opts.OnFrameError != nil {
+				c.opts.OnFrameError(err, data)
+			}
+			// Unblock a matching pending Do when requestId is present so an
+			// unknown/@type or decode error cannot leave Do hanging forever.
+			var probe struct {
+				RequestID string `json:"requestId"`
+			}
+			if jsonv2.Unmarshal(data, &probe) == nil && probe.RequestID != "" {
+				c.deliver(probe.RequestID, doResult{err: err})
+			}
 			continue
 		}
 		switch {
@@ -378,6 +425,10 @@ func (c *Conn) readLoop(ctx context.Context) {
 			c.mu.Unlock()
 			if h != nil {
 				h(fr.StateChange)
+			}
+		case fr.CalendarAlert != nil:
+			if c.opts.OnCalendarAlert != nil {
+				c.opts.OnCalendarAlert(fr.CalendarAlert)
 			}
 		case fr.Response != nil:
 			c.deliver(fr.RequestID, doResult{resp: fr.Response})

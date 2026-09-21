@@ -1,14 +1,22 @@
 package principal
 
-import "git.sr.ht/~rockorager/go-jmap"
+import (
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/sharing"
+)
 
 func init() {
-	jmap.RegisterMethod("Principal/get", newGetResponse)
+	jmap.RegisterObject[Principal](
+		jmap.MethodGet |
+			jmap.MethodChanges |
+			jmap.MethodQuery |
+			jmap.MethodQueryChanges |
+			jmap.MethodSet,
+	)
+	// Principal/changes includes updatedProperties; override kit factory.
+	jmap.RegisterMethod("Principal/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
+	// Manual method (not part of the standard kit).
 	jmap.RegisterMethod("Principal/getAvailability", newGetAvailabilityResponse)
-	jmap.RegisterMethod("Principal/changes", newChangesResponse)
-	jmap.RegisterMethod("Principal/set", newSetResponse)
-	jmap.RegisterMethod("Principal/query", newQueryResponse)
-	jmap.RegisterMethod("Principal/queryChanges", newQueryChangesResponse)
 }
 
 const (
@@ -34,19 +42,23 @@ const (
 // Principal represents an individual, team, location, or other shared entity.
 // https://www.rfc-editor.org/rfc/rfc9670.html#section-2
 type Principal struct {
-	ID jmap.ID `json:"id,omitempty"`
+	ID jmap.ID `json:"id,omitzero"`
 
-	Type PrincipalType `json:"type,omitempty"`
+	Type PrincipalType `json:"type,omitzero"`
 
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
-	Email string `json:"email,omitempty"`
+	Email string `json:"email,omitzero"`
 
-	TimeZone string `json:"timeZone,omitempty"`
+	TimeZone string `json:"timeZone,omitzero"`
 
-	Capabilities map[jmap.URI]jmap.Patch `json:"capabilities,omitempty"`
+	Capabilities map[jmap.URI]jmap.Patch `json:"capabilities,omitzero"`
 
-	Accounts map[jmap.ID]jmap.Account `json:"accounts,omitempty"`
+	Accounts map[jmap.ID]jmap.Account `json:"accounts,omitzero"`
 }
+
+func (Principal) JMAPType() string { return "Principal" }
+
+func (Principal) Requires() []jmap.URI { return []jmap.URI{sharing.URI} }

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

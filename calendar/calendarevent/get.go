@@ -1,45 +1,23 @@
 package calendarevent
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 )
 
 // Get calendar event details.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.7
 type Get struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	jmap.Get[CalendarEvent]
 
-	IDs []jmap.ID `json:"ids,omitempty"`
+	RecurrenceOverridesBefore *jscalendar.UTCDateTime `json:"recurrenceOverridesBefore,omitzero"`
 
-	Properties []string `json:"properties,omitempty"`
+	RecurrenceOverridesAfter *jscalendar.UTCDateTime `json:"recurrenceOverridesAfter,omitzero"`
 
-	ReferenceIDs *jmap.ResultReference `json:"#ids,omitempty"`
+	ReduceParticipants bool `json:"reduceParticipants,omitzero"`
 
-	ReferenceProperties *jmap.ResultReference `json:"#properties,omitempty"`
-
-	RecurrenceOverridesBefore *jscalendar.UTCDateTime `json:"recurrenceOverridesBefore,omitempty"`
-
-	RecurrenceOverridesAfter *jscalendar.UTCDateTime `json:"recurrenceOverridesAfter,omitempty"`
-
-	ReduceParticipants bool `json:"reduceParticipants,omitempty"`
-
-	TimeZone jscalendar.TimeZoneID `json:"timeZone,omitempty"`
+	TimeZone jscalendar.TimeZoneID `json:"timeZone,omitzero"`
 }
 
-func (m *Get) Name() string { return "CalendarEvent/get" }
-
-func (m *Get) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
-type GetResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	State string `json:"state,omitempty"`
-
-	List []*CalendarEvent `json:"list,omitempty"`
-
-	NotFound []jmap.ID `json:"notFound,omitempty"`
-}
-
-func newGetResponse() jmap.MethodResponse { return &GetResponse{} }
+// GetResponse is the result of CalendarEvent/get.
+type GetResponse = jmap.GetResponse[CalendarEvent]

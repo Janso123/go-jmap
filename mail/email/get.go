@@ -1,46 +1,22 @@
 package email
 
-import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/mail"
-)
+import "github.com/Janso123/go-jmap"
 
 // Get email details
 // https://www.rfc-editor.org/rfc/rfc8621.html#section-4.2
 type Get struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	jmap.Get[Email]
 
-	IDs []jmap.ID `json:"ids,omitempty"`
+	BodyProperties []string `json:"bodyProperties,omitzero"`
 
-	Properties []string `json:"properties,omitempty"`
+	FetchTextBodyValues bool `json:"fetchTextBodyValues,omitzero"`
 
-	BodyProperties []string `json:"bodyProperties,omitempty"`
+	FetchHTMLBodyValues bool `json:"fetchHTMLBodyValues,omitzero"`
 
-	FetchTextBodyValues bool `json:"fetchTextBodyValues,omitempty"`
+	FetchAllBodyValues bool `json:"fetchAllBodyValues,omitzero"`
 
-	FetchHTMLBodyValues bool `json:"fetchHTMLBodyValues,omitempty"`
-
-	FetchAllBodyValues bool `json:"fetchAllBodyValues,omitempty"`
-
-	MaxBodyValueBytes uint64 `json:"maxBodyValueBytes,omitempty"`
-
-	ReferenceIDs *jmap.ResultReference `json:"#ids,omitempty"`
-
-	ReferenceProperties *jmap.ResultReference `json:"#properties,omitempty"`
+	MaxBodyValueBytes uint64 `json:"maxBodyValueBytes,omitzero"`
 }
 
-func (m *Get) Name() string { return "Email/get" }
-
-func (m *Get) Requires() []jmap.URI { return []jmap.URI{mail.URI} }
-
-type GetResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	State string `json:"state,omitempty"`
-
-	List []*Email `json:"list,omitempty"`
-
-	NotFound []jmap.ID `json:"notFound,omitempty"`
-}
-
-func newGetResponse() jmap.MethodResponse { return &GetResponse{} }
+// GetResponse is the result of Email/get.
+type GetResponse = jmap.GetResponse[Email]

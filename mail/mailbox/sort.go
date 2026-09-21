@@ -1,6 +1,6 @@
 package mailbox
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 type SortComparator struct {
 	// The name of the property on the Mailbox objects to compare.

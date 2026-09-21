@@ -1,6 +1,6 @@
 package sieve
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 type Filter interface {
 	implementsFilter()

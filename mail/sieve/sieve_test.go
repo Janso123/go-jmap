@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/mail/sieve"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/mail/sieve"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

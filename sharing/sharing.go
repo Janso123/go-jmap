@@ -1,6 +1,6 @@
 package sharing
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 // URI is the JMAP principals session capability (RFC 9670).
 const URI jmap.URI = "urn:ietf:params:jmap:principals"

@@ -40,7 +40,7 @@ import (
 	"context"
 	"errors"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 // ErrH2ConnectUnsupported is returned by DialH2Connect while github.com/coder/websocket

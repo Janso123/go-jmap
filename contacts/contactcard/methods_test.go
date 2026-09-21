@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/contacts"
-	"git.sr.ht/~rockorager/go-jmap/contacts/jscontact"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/contacts"
+	"github.com/Janso123/go-jmap/contacts/jscontact"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -97,7 +97,7 @@ func TestQueryInvoke(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/query",{"accountId":"u1","filter":{"inAddressBook":"ab1","name/given":"Ada"},"sort":[{"property":"name/given","isAscending":false}],"limit":10},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/query",{"accountId":"u1","limit":10,"filter":{"inAddressBook":"ab1","name/given":"Ada"},"sort":[{"property":"name/given","isAscending":false}]},"0"]]}`,
 		string(data))
 }
 
@@ -120,7 +120,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/queryChanges",{"accountId":"u1","filter":{"email":"ada@example.com"},"sort":[{"property":"name/surname","isAscending":false}],"sinceQueryState":"q1","maxChanges":25},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":25,"filter":{"email":"ada@example.com"},"sort":[{"property":"name/surname","isAscending":false}]},"0"]]}`,
 		string(data))
 }
 

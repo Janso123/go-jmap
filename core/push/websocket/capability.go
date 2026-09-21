@@ -1,6 +1,6 @@
 package websocket
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 // URI is the JMAP capability for WebSocket transport (RFC 8887).
 const URI jmap.URI = "urn:ietf:params:jmap:websocket"

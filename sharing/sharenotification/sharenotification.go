@@ -3,15 +3,20 @@ package sharenotification
 import (
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/sharing"
 )
 
 func init() {
-	jmap.RegisterMethod("ShareNotification/get", newGetResponse)
-	jmap.RegisterMethod("ShareNotification/changes", newChangesResponse)
-	jmap.RegisterMethod("ShareNotification/set", newSetResponse)
-	jmap.RegisterMethod("ShareNotification/query", newQueryResponse)
-	jmap.RegisterMethod("ShareNotification/queryChanges", newQueryChangesResponse)
+	jmap.RegisterObject[ShareNotification](
+		jmap.MethodGet |
+			jmap.MethodChanges |
+			jmap.MethodQuery |
+			jmap.MethodQueryChanges |
+			jmap.MethodSet,
+	)
+	// ShareNotification/changes includes updatedProperties; override kit factory.
+	jmap.RegisterMethod("ShareNotification/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 const (
@@ -22,31 +27,35 @@ const (
 // Entity describes who made a sharing change.
 // https://www.rfc-editor.org/rfc/rfc9670.html#section-3
 type Entity struct {
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
-	Email *string `json:"email,omitempty"`
+	Email *string `json:"email,omitzero"`
 
-	PrincipalID *jmap.ID `json:"principalId,omitempty"`
+	PrincipalID *jmap.ID `json:"principalId,omitzero"`
 }
 
 // ShareNotification records a change to a user's access rights on a shared object.
 // https://www.rfc-editor.org/rfc/rfc9670.html#section-3
 type ShareNotification struct {
-	ID jmap.ID `json:"id,omitempty"`
+	ID jmap.ID `json:"id,omitzero"`
 
-	Created *time.Time `json:"created,omitempty"`
+	Created *time.Time `json:"created,omitzero"`
 
-	ChangedBy *Entity `json:"changedBy,omitempty"`
+	ChangedBy *Entity `json:"changedBy,omitzero"`
 
-	ObjectAccountID jmap.ID `json:"objectAccountId,omitempty"`
+	ObjectAccountID jmap.ID `json:"objectAccountId,omitzero"`
 
-	ObjectType string `json:"objectType,omitempty"`
+	ObjectType string `json:"objectType,omitzero"`
 
-	ObjectID jmap.ID `json:"objectId,omitempty"`
+	ObjectID jmap.ID `json:"objectId,omitzero"`
 
-	OldRights map[string]bool `json:"oldRights,omitempty"`
+	OldRights map[string]bool `json:"oldRights,omitzero"`
 
-	NewRights map[string]bool `json:"newRights,omitempty"`
+	NewRights map[string]bool `json:"newRights,omitzero"`
 
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 }
+
+func (ShareNotification) JMAPType() string { return "ShareNotification" }
+
+func (ShareNotification) Requires() []jmap.URI { return []jmap.URI{sharing.URI} }

@@ -1,7 +1,7 @@
 package mdn
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 // Parse blobs as messages in the style of RFC5322 to get MDN objects

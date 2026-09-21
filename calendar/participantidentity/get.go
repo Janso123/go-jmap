@@ -1,36 +1,12 @@
 package participantidentity
 
-import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
-)
+import "github.com/Janso123/go-jmap"
 
 // Get participant identity details.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-3.1
 type Get struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	IDs []jmap.ID `json:"ids,omitempty"`
-
-	Properties []string `json:"properties,omitempty"`
-
-	ReferenceIDs *jmap.ResultReference `json:"#ids,omitempty"`
-
-	ReferenceProperties *jmap.ResultReference `json:"#properties,omitempty"`
+	jmap.Get[ParticipantIdentity]
 }
 
-func (m *Get) Name() string { return "ParticipantIdentity/get" }
-
-func (m *Get) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
-type GetResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	State string `json:"state,omitempty"`
-
-	List []*ParticipantIdentity `json:"list,omitempty"`
-
-	NotFound []jmap.ID `json:"notFound,omitempty"`
-}
-
-func newGetResponse() jmap.MethodResponse { return &GetResponse{} }
+// GetResponse is the result of ParticipantIdentity/get.
+type GetResponse = jmap.GetResponse[ParticipantIdentity]

@@ -1,8 +1,8 @@
 package identity
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/mail/emailsubmission"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/mail/emailsubmission"
 )
 
 // Get details identity details

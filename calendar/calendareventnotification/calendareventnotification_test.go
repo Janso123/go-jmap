@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

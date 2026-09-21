@@ -1,8 +1,8 @@
 package mdn
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/mail"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/mail"
 )
 
 // Sends an RFC5322 message from an MDN object

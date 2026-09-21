@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 const URI jmap.URI = "urn:ietf:params:jmap:submission"
@@ -50,7 +50,7 @@ type EmailSubmission struct {
 
 	SendAt *time.Time `json:"sendAt,omitempty"`
 
-	UndoStatus string `json:"undoStatus,omitempty"`
+	UndoStatus UndoStatus `json:"undoStatus,omitempty"`
 
 	DeliveryStatus map[string]*DeliveryStatus `json:"deliveryStatus,omitempty"`
 
@@ -58,6 +58,15 @@ type EmailSubmission struct {
 
 	MDNBlobIDs []jmap.ID `json:"mdnBlobIds,omitempty"`
 }
+
+// UndoStatus is the undoability of an EmailSubmission.
+type UndoStatus string
+
+const (
+	UndoPending  UndoStatus = "pending"
+	UndoFinal    UndoStatus = "final"
+	UndoCanceled UndoStatus = "canceled"
+)
 
 func (s *EmailSubmission) MarshalJSON() ([]byte, error) {
 	if s.SendAt != nil && s.SendAt.Location() != time.UTC {
@@ -82,24 +91,36 @@ type Address struct {
 	Email string `json:"email,omitempty"`
 
 	// Parameters to send with the email submission, if any SMTP extensions
-	// are used
-	Parameters interface{} `json:"parameters,omitempty"`
+	// are used. A nil value means the parameter is present with no value.
+	Parameters map[string]*string `json:"parameters,omitempty"`
 }
+
+// Delivered is the delivery outcome for a recipient.
+type Delivered string
+
+const (
+	DeliveredQueued  Delivered = "queued"
+	DeliveredYes     Delivered = "yes"
+	DeliveredNo      Delivered = "no"
+	DeliveredUnknown Delivered = "unknown"
+)
+
+// Displayed is whether the message has been displayed by the recipient.
+type Displayed string
+
+const (
+	DisplayedUnknown Displayed = "unknown"
+	DisplayedYes     Displayed = "yes"
+)
 
 type DeliveryStatus struct {
 	// The SMTP reply returned for the recipient
 	SMTPReply string `json:"smtpReply,omitempty"`
 
 	// Represents whether the message has been successfully delivered to the
-	// recipient. Will be one of:
-	// - "queued": In a local mail queue
-	// - "yes": Delivered
-	// - "no": Delivery failed
-	// - "unknown": Final delivery status is unknown
-	Delivered string `json:"delivered,omitempty"`
+	// recipient.
+	Delivered Delivered `json:"delivered,omitempty"`
 
-	// Whether the message has been displayed by the recipient. One of:
-	// - "unknown"
-	// - "yes"
-	Displayed string `json:"displayed,omitempty"`
+	// Whether the message has been displayed by the recipient.
+	Displayed Displayed `json:"displayed,omitempty"`
 }

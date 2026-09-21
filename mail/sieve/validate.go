@@ -1,6 +1,6 @@
 package sieve
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 // Validate checks Sieve script validity without storing it on the server.
 // https://www.rfc-editor.org/rfc/rfc9661.html#section-2.6

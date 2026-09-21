@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/core"
-	_ "git.sr.ht/~rockorager/go-jmap/core"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/core"
+	_ "github.com/Janso123/go-jmap/core"
 	cws "github.com/coder/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,7 +68,7 @@ func TestConnDoAndPush(t *testing.T) {
 
 	jc := (&jmap.Client{}).WithBasicAuth("user", "pass")
 	jc.Session = &jmap.Session{
-		RawCapabilities: map[jmap.URI]json.RawMessage{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
 			jmap.CoreURI: []byte(`{}`),
 			URI:          []byte(`{"url":"` + wsURL + `","supportsPush":true}`),
 		},
@@ -160,7 +161,7 @@ func TestConnDoRequestError(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
 	jc := (&jmap.Client{}).WithAccessToken("tok")
 	jc.Session = &jmap.Session{
-		RawCapabilities: map[jmap.URI]json.RawMessage{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
 			jmap.CoreURI: []byte(`{}`),
 		},
 	}
@@ -181,9 +182,119 @@ func TestConnDoRequestError(t *testing.T) {
 func TestDialMissingCapability(t *testing.T) {
 	jc := &jmap.Client{
 		Session: &jmap.Session{
-			RawCapabilities: map[jmap.URI]json.RawMessage{},
+			RawCapabilities: map[jmap.URI]jsontext.Value{},
 		},
 	}
 	_, err := Dial(context.Background(), jc)
 	require.Error(t, err)
+}
+
+func TestOnFrameErrorCalled(t *testing.T) {
+	frameErrCh := make(chan struct {
+		err error
+		raw []byte
+	}, 1)
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := cws.Accept(w, r, &cws.AcceptOptions{
+			Subprotocols:       []string{"jmap"},
+			InsecureSkipVerify: true,
+		})
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+		ctx := context.Background()
+		for {
+			_, data, err := c.Read(ctx)
+			if err != nil {
+				return
+			}
+			var probe struct {
+				Type string `json:"@type"`
+				ID   string `json:"id"`
+			}
+			if err := json.Unmarshal(data, &probe); err != nil || probe.Type != "Request" {
+				continue
+			}
+			_ = c.Write(ctx, cws.MessageText, []byte(`{"@type":"Nope","requestId":`+fmt.Sprintf("%q", probe.ID)+`}`))
+			resp := fmt.Sprintf(
+				`{"@type":"Response","requestId":%q,"methodResponses":[["Core/echo",{"Hello":"ok"},"0"]],"sessionState":"s"}`,
+				probe.ID,
+			)
+			_ = c.Write(ctx, cws.MessageText, []byte(resp))
+		}
+	}))
+	defer s.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
+	jc := (&jmap.Client{}).WithAccessToken("tok")
+	jc.Session = &jmap.Session{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
+			jmap.CoreURI: []byte(`{}`),
+		},
+	}
+
+	conn, err := DialURL(context.Background(), jc, wsURL, Options{
+		OnFrameError: func(err error, raw []byte) {
+			select {
+			case frameErrCh <- struct {
+				err error
+				raw []byte
+			}{err, append([]byte(nil), raw...)}:
+			default:
+			}
+		},
+	})
+	require.NoError(t, err)
+	defer conn.Close()
+
+	req := &jmap.Request{}
+	req.Invoke(&core.Echo{Hello: "ok"})
+	doCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	resp, err := conn.Do(doCtx, req)
+
+	select {
+	case fe := <-frameErrCh:
+		require.Error(t, fe.err)
+		assert.Contains(t, string(fe.raw), `"Nope"`)
+	case <-time.After(2 * time.Second):
+		t.Fatal("OnFrameError was not called")
+	}
+
+	// Unknown @type with requestId must unblock Do (error), not hang.
+	require.Error(t, err)
+	assert.Nil(t, resp)
+}
+
+func TestPingPublic(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := cws.Accept(w, r, &cws.AcceptOptions{
+			Subprotocols:       []string{"jmap"},
+			InsecureSkipVerify: true,
+		})
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+		_, _, _ = c.Read(context.Background())
+	}))
+	defer s.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
+	jc := (&jmap.Client{}).WithAccessToken("tok")
+	jc.Session = &jmap.Session{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
+			jmap.CoreURI: []byte(`{}`),
+		},
+	}
+
+	conn, err := DialURL(context.Background(), jc, wsURL)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	require.NoError(t, conn.Ping(ctx))
 }

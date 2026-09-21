@@ -1,8 +1,8 @@
 package calendarevent
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 )
 
 type Filter interface {

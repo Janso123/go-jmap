@@ -12,9 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/core"
-	_ "git.sr.ht/~rockorager/go-jmap/core"
+	"encoding/json/jsontext"
+
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/core"
+	_ "github.com/Janso123/go-jmap/core"
 	cws "github.com/coder/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +42,7 @@ func TestDialURLCompressionExtension(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
 	jc := (&jmap.Client{}).WithAccessToken("tok")
 	jc.Session = &jmap.Session{
-		RawCapabilities: map[jmap.URI]json.RawMessage{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
 			jmap.CoreURI: []byte(`{}`),
 		},
 	}
@@ -108,7 +110,7 @@ func TestDialURLMaxConcurrentRequests(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
 	jc := (&jmap.Client{}).WithAccessToken("tok")
 	jc.Session = &jmap.Session{
-		RawCapabilities: map[jmap.URI]json.RawMessage{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
 			jmap.CoreURI: []byte(`{}`),
 		},
 		Capabilities: map[jmap.URI]jmap.Capability{
@@ -142,6 +144,50 @@ func TestDialURLMaxConcurrentRequests(t *testing.T) {
 	mu.Lock()
 	assert.Equal(t, 1, maxSeen)
 	mu.Unlock()
+}
+
+func TestPingIntervalKeepalive(t *testing.T) {
+	sawPing := make(chan struct{}, 1)
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := cws.Accept(w, r, &cws.AcceptOptions{
+			Subprotocols:       []string{"jmap"},
+			InsecureSkipVerify: true,
+			OnPingReceived: func(ctx context.Context, payload []byte) bool {
+				select {
+				case sawPing <- struct{}{}:
+				default:
+				}
+				return true // write pong
+			},
+		})
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+		_, _, _ = c.Read(context.Background())
+	}))
+	defer s.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
+	jc := (&jmap.Client{}).WithAccessToken("tok")
+	jc.Session = &jmap.Session{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
+			jmap.CoreURI: []byte(`{}`),
+		},
+	}
+
+	conn, err := DialURL(context.Background(), jc, wsURL, Options{
+		PingInterval: 30 * time.Millisecond,
+	})
+	require.NoError(t, err)
+	defer conn.Close()
+
+	select {
+	case <-sawPing:
+	case <-time.After(2 * time.Second):
+		t.Fatal("PingInterval keepalive did not send a ping")
+	}
 }
 
 func TestConnAutoReconnect(t *testing.T) {
@@ -193,7 +239,7 @@ func TestConnAutoReconnect(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
 	jc := (&jmap.Client{}).WithAccessToken("tok")
 	jc.Session = &jmap.Session{
-		RawCapabilities: map[jmap.URI]json.RawMessage{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
 			jmap.CoreURI: []byte(`{}`),
 		},
 	}

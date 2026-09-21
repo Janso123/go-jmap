@@ -1,6 +1,6 @@
 package blob
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 // URI is the JMAP Blob Management capability (RFC 9404).
 const URI jmap.URI = "urn:ietf:params:jmap:blob"

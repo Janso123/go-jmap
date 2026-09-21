@@ -1,11 +1,11 @@
 package principal
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
-	"git.sr.ht/~rockorager/go-jmap/calendar/calendarevent"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
-	"git.sr.ht/~rockorager/go-jmap/sharing"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar"
+	"github.com/Janso123/go-jmap/calendar/calendarevent"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap/sharing"
 )
 
 // BusyStatus describes why a principal is unavailable for scheduling.

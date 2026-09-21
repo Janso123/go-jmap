@@ -1,20 +1,15 @@
 package email
 
-import (
-	"encoding/json"
-	"time"
-
-	"git.sr.ht/~rockorager/go-jmap"
-)
+import "github.com/Janso123/go-jmap"
 
 type Filter interface {
 	implementsFilter()
 }
 
 type FilterOperator struct {
-	Operator jmap.Operator `json:"operator,omitempty"`
+	Operator jmap.Operator `json:"operator,omitzero"`
 
-	Conditions []Filter `json:"conditions,omitempty"`
+	Conditions []Filter `json:"conditions,omitzero"`
 }
 
 func (fo *FilterOperator) implementsFilter() {}
@@ -22,65 +17,127 @@ func (fo *FilterOperator) implementsFilter() {}
 // Email query condition that can be compounded with FilterOperator
 // https://www.rfc-editor.org/rfc/rfc8621.html#section-4.4.1
 type FilterCondition struct {
-	InMailbox jmap.ID `json:"inMailbox,omitempty"`
+	InMailbox jmap.ID `json:"inMailbox,omitzero"`
 
-	InMailboxOtherThan []jmap.ID `json:"inMailboxOtherThan,omitempty"`
+	InMailboxOtherThan []jmap.ID `json:"inMailboxOtherThan,omitzero"`
 
-	Before *time.Time `json:"before,omitempty"`
+	Before *jmap.UTCDate `json:"before,omitzero"`
 
-	After *time.Time `json:"after,omitempty"`
+	After *jmap.UTCDate `json:"after,omitzero"`
 
-	MinSize uint64 `json:"minSize,omitempty"`
+	MinSize uint64 `json:"minSize,omitzero"`
 
-	MaxSize uint64 `json:"maxSize,omitempty"`
+	MaxSize uint64 `json:"maxSize,omitzero"`
 
-	AllInThreadHaveKeyword string `json:"allInThreadHaveKeyword,omitempty"`
+	AllInThreadHaveKeyword string `json:"allInThreadHaveKeyword,omitzero"`
 
-	SomeInThreadHaveKeyword string `json:"someInThreadHaveKeyword,omitempty"`
+	SomeInThreadHaveKeyword string `json:"someInThreadHaveKeyword,omitzero"`
 
-	NoneInThreadHaveKeyword string `json:"noneInThreadHaveKeyword,omitempty"`
+	NoneInThreadHaveKeyword string `json:"noneInThreadHaveKeyword,omitzero"`
 
-	HasKeyword string `json:"hasKeyword,omitempty"`
+	HasKeyword string `json:"hasKeyword,omitzero"`
 
-	NotKeyword string `json:"notKeyword,omitempty"`
+	NotKeyword string `json:"notKeyword,omitzero"`
 
-	HasAttachment bool `json:"hasAttachment,omitempty"`
+	HasAttachment bool `json:"hasAttachment,omitzero"`
 
-	Text string `json:"text,omitempty"`
+	Text string `json:"text,omitzero"`
 
-	From string `json:"from,omitempty"`
+	From string `json:"from,omitzero"`
 
-	To string `json:"to,omitempty"`
+	To string `json:"to,omitzero"`
 
-	Cc string `json:"cc,omitempty"`
+	Cc string `json:"cc,omitzero"`
 
-	Bcc string `json:"bcc,omitempty"`
+	Bcc string `json:"bcc,omitzero"`
 
-	Subject string `json:"subject,omitempty"`
+	Subject string `json:"subject,omitzero"`
 
-	Body string `json:"body,omitempty"`
+	Body string `json:"body,omitzero"`
 
-	Header []string `json:"header,omitempty"`
+	Header []string `json:"header,omitzero"`
 
-	HasSMIME bool `json:"hasSmime,omitempty"`
+	HasSMIME bool `json:"hasSmime,omitzero"`
 
-	HasVerifiedSMIME bool `json:"hasVerifiedSmime,omitempty"`
+	HasVerifiedSMIME bool `json:"hasVerifiedSmime,omitzero"`
 
-	HasVerifiedSMIMEAtDelivery bool `json:"hasVerifiedSmimeAtDelivery,omitempty"`
+	HasVerifiedSMIMEAtDelivery bool `json:"hasVerifiedSmimeAtDelivery,omitzero"`
 }
 
 func (fc *FilterCondition) implementsFilter() {}
 
-func (fc *FilterCondition) MarshalJSON() ([]byte, error) {
-	if fc.Before != nil && fc.Before.Location() != time.UTC {
-		utc := fc.Before.UTC()
-		fc.Before = &utc
-	}
-	if fc.After != nil && fc.After.Location() != time.UTC {
-		utc := fc.After.UTC()
-		fc.After = &utc
-	}
-	// create a type alias to avoid infinite recursion
-	type Alias FilterCondition
-	return json.Marshal((*Alias)(fc))
+// And returns a FilterOperator matching when all conditions match.
+func And(conds ...Filter) *FilterOperator {
+	return &FilterOperator{Operator: jmap.OperatorAND, Conditions: conds}
+}
+
+// Or returns a FilterOperator matching when any condition matches.
+func Or(conds ...Filter) *FilterOperator {
+	return &FilterOperator{Operator: jmap.OperatorOR, Conditions: conds}
+}
+
+// Not returns a FilterOperator matching when none of the conditions match.
+func Not(conds ...Filter) *FilterOperator {
+	return &FilterOperator{Operator: jmap.OperatorNOT, Conditions: conds}
+}
+
+// InMailbox filters emails in the given mailbox.
+func InMailbox(id jmap.ID) *FilterCondition {
+	return &FilterCondition{InMailbox: id}
+}
+
+// InMailboxesOtherThan filters emails in any mailbox other than the given ones.
+func InMailboxesOtherThan(ids ...jmap.ID) *FilterCondition {
+	return &FilterCondition{InMailboxOtherThan: ids}
+}
+
+// HasKeyword returns a filter for emails that have the given keyword.
+// Note: Email.HasKeyword is the object accessor with the same name.
+func HasKeyword(kw string) *FilterCondition {
+	return &FilterCondition{HasKeyword: kw}
+}
+
+// NotKeyword returns a filter for emails that do not have the given keyword.
+func NotKeyword(kw string) *FilterCondition {
+	return &FilterCondition{NotKeyword: kw}
+}
+
+// Subject returns a filter matching subject substring.
+func Subject(s string) *FilterCondition {
+	return &FilterCondition{Subject: s}
+}
+
+// From returns a filter matching From substring.
+func From(s string) *FilterCondition {
+	return &FilterCondition{From: s}
+}
+
+// To returns a filter matching To substring.
+func To(s string) *FilterCondition {
+	return &FilterCondition{To: s}
+}
+
+// Text returns a full-text search filter.
+func Text(s string) *FilterCondition {
+	return &FilterCondition{Text: s}
+}
+
+// Body returns a filter matching body substring.
+func Body(s string) *FilterCondition {
+	return &FilterCondition{Body: s}
+}
+
+// Before returns a filter for emails received before d.
+func Before(d jmap.UTCDate) *FilterCondition {
+	return &FilterCondition{Before: &d}
+}
+
+// After returns a filter for emails received after d.
+func After(d jmap.UTCDate) *FilterCondition {
+	return &FilterCondition{After: &d}
+}
+
+// WithAttachment returns a filter for emails that have attachments.
+func WithAttachment() *FilterCondition {
+	return &FilterCondition{HasAttachment: true}
 }

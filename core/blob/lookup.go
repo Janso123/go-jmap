@@ -1,6 +1,6 @@
 package blob
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 // Lookup reverse references to blobs across JMAP data types.
 // https://www.rfc-editor.org/rfc/rfc9404.html#section-4.3

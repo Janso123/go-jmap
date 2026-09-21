@@ -1,8 +1,8 @@
 package searchsnippet
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/mail"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/mail"
 )
 
 // Get search snippet details
@@ -17,7 +17,7 @@ type Get struct {
 	ReferenceIDs *jmap.ResultReference `json:"#emailIds,omitempty"`
 }
 
-func (m *Get) Name() string { return "Mailbox/get" }
+func (m *Get) Name() string { return "SearchSnippet/get" }
 
 func (m *Get) Requires() []jmap.URI { return []jmap.URI{mail.URI} }
 

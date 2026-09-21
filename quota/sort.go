@@ -1,6 +1,6 @@
 package quota
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 type SortComparator struct {
 	// The name of the property on the Quota objects to compare.

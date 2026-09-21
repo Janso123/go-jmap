@@ -3,7 +3,7 @@ package subscription
 import (
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 func init() {

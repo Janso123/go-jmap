@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ func TestQueryInvokeWithExpandedRecurrences(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/query",{"accountId":"u1","filter":{"inCalendar":"cal1","after":"2026-01-01T00:00:00","before":"2026-02-01T00:00:00"},"sort":[{"property":"start","isAscending":true}],"limit":10,"expandRecurrences":true,"timeZone":"Europe/Warsaw"},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/query",{"accountId":"u1","limit":10,"filter":{"inCalendar":"cal1","after":"2026-01-01T00:00:00","before":"2026-02-01T00:00:00"},"sort":[{"property":"start","isAscending":true}],"expandRecurrences":true,"timeZone":"Europe/Warsaw"},"0"]]}`,
 		string(data))
 }
 

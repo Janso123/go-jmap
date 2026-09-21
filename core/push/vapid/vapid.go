@@ -1,6 +1,6 @@
 package vapid
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 const URI jmap.URI = "urn:ietf:params:jmap:webpush-vapid"
 
@@ -10,5 +10,5 @@ type Capability struct {
 	ApplicationServerKey string `json:"applicationServerKey"`
 }
 
-func (c *Capability) URI() jmap.URI { return URI }
+func (c *Capability) URI() jmap.URI        { return URI }
 func (c *Capability) New() jmap.Capability { return &Capability{} }

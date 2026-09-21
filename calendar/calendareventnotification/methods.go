@@ -1,116 +1,51 @@
 package calendareventnotification
 
-import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
-)
+import "github.com/Janso123/go-jmap"
 
 // Changes gets notification changes for the whole account.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-7.2
 type Changes struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	SinceState string `json:"sinceState,omitempty"`
-
-	MaxChanges uint64 `json:"maxChanges,omitempty"`
+	jmap.Changes[CalendarEventNotification]
 }
 
-func (m *Changes) Name() string { return "CalendarEventNotification/changes" }
-
-func (m *Changes) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
+// ChangesResponse is the result of CalendarEventNotification/changes.
+// updatedProperties is CalendarEventNotification-specific.
 type ChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	OldState string `json:"oldState,omitempty"`
+	OldState string `json:"oldState,omitzero"`
 
-	NewState string `json:"newState,omitempty"`
+	NewState string `json:"newState,omitzero"`
 
-	HasMoreChanges bool `json:"hasMoreChanges,omitempty"`
+	HasMoreChanges bool `json:"hasMoreChanges,omitzero"`
 
-	Created []jmap.ID `json:"created,omitempty"`
+	Created []jmap.ID `json:"created,omitzero"`
 
-	Updated []jmap.ID `json:"updated,omitempty"`
+	Updated []jmap.ID `json:"updated,omitzero"`
 
-	Destroyed []jmap.ID `json:"destroyed,omitempty"`
+	Destroyed []jmap.ID `json:"destroyed,omitzero"`
 
-	UpdatedProperties []string `json:"updatedProperties,omitempty"`
+	UpdatedProperties []string `json:"updatedProperties,omitzero"`
 }
-
-func newChangesResponse() jmap.MethodResponse { return &ChangesResponse{} }
 
 // Set destroys event notifications.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-7.3
 type Set struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	IfInState string `json:"ifInState,omitempty"`
-
-	Create map[jmap.ID]*CalendarEventNotification `json:"create,omitempty"`
-
-	Update map[jmap.ID]jmap.Patch `json:"update,omitempty"`
-
-	Destroy []jmap.ID `json:"destroy,omitempty"`
+	jmap.Set[CalendarEventNotification]
 }
 
-func (m *Set) Name() string { return "CalendarEventNotification/set" }
-
-func (m *Set) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
-type SetResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	OldState string `json:"oldState,omitempty"`
-
-	NewState string `json:"newState,omitempty"`
-
-	Created map[jmap.ID]*CalendarEventNotification `json:"created,omitempty"`
-
-	Updated map[jmap.ID]*CalendarEventNotification `json:"updated,omitempty"`
-
-	Destroyed []jmap.ID `json:"destroyed,omitempty"`
-
-	NotCreated map[jmap.ID]*jmap.SetError `json:"notCreated,omitempty"`
-
-	NotUpdated map[jmap.ID]*jmap.SetError `json:"notUpdated,omitempty"`
-
-	NotDestroyed map[jmap.ID]*jmap.SetError `json:"notDestroyed,omitempty"`
-}
-
-func newSetResponse() jmap.MethodResponse { return &SetResponse{} }
+// SetResponse is the result of CalendarEventNotification/set.
+type SetResponse = jmap.SetResponse[CalendarEventNotification]
 
 // QueryChanges gets changes to a notification query since a given state.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-7.5
 type QueryChanges struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	jmap.QueryChanges[CalendarEventNotification]
 
-	Filter Filter `json:"filter,omitempty"`
+	Filter Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitempty"`
-
-	SinceQueryState string `json:"sinceQueryState,omitempty"`
-
-	MaxChanges uint64 `json:"maxChanges,omitempty"`
-
-	UpToID jmap.ID `json:"upToId,omitempty"`
-
-	CalculateTotal bool `json:"calculateTotal,omitempty"`
+	Sort []*SortComparator `json:"sort,omitzero"`
 }
 
-func (m *QueryChanges) Name() string { return "CalendarEventNotification/queryChanges" }
-
-func (m *QueryChanges) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
-type QueryChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	OldQueryState string `json:"oldQueryState,omitempty"`
-
-	NewQueryState string `json:"newQueryState,omitempty"`
-
-	Removed []jmap.ID `json:"removed,omitempty"`
-
-	Added []*jmap.AddedItem `json:"added,omitempty"`
-}
-
-func newQueryChangesResponse() jmap.MethodResponse { return &QueryChangesResponse{} }
+// QueryChangesResponse is the result of CalendarEventNotification/queryChanges.
+type QueryChangesResponse = jmap.QueryChangesResponse

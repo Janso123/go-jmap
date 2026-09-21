@@ -5,7 +5,7 @@ package mail
 import (
 	"fmt"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 // urn:ietf:params:jmap:mail represents support for the Mailbox, Thread, Email,

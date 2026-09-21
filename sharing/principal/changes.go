@@ -1,40 +1,29 @@
 package principal
 
-import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/sharing"
-)
+import "github.com/Janso123/go-jmap"
 
 // Changes gets principal changes for the whole account.
 // https://www.rfc-editor.org/rfc/rfc9670.html#section-2.2
 type Changes struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	SinceState string `json:"sinceState,omitempty"`
-
-	MaxChanges uint64 `json:"maxChanges,omitempty"`
+	jmap.Changes[Principal]
 }
 
-func (m *Changes) Name() string { return "Principal/changes" }
-
-func (m *Changes) Requires() []jmap.URI { return []jmap.URI{sharing.URI} }
-
+// ChangesResponse is the result of Principal/changes.
+// updatedProperties is Principal-specific (not on the kit ChangesResponse).
 type ChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	OldState string `json:"oldState,omitempty"`
+	OldState string `json:"oldState,omitzero"`
 
-	NewState string `json:"newState,omitempty"`
+	NewState string `json:"newState,omitzero"`
 
-	HasMoreChanges bool `json:"hasMoreChanges,omitempty"`
+	HasMoreChanges bool `json:"hasMoreChanges,omitzero"`
 
-	Created []jmap.ID `json:"created,omitempty"`
+	Created []jmap.ID `json:"created,omitzero"`
 
-	Updated []jmap.ID `json:"updated,omitempty"`
+	Updated []jmap.ID `json:"updated,omitzero"`
 
-	Destroyed []jmap.ID `json:"destroyed,omitempty"`
+	Destroyed []jmap.ID `json:"destroyed,omitzero"`
 
-	UpdatedProperties []string `json:"updatedProperties,omitempty"`
+	UpdatedProperties []string `json:"updatedProperties,omitzero"`
 }
-
-func newChangesResponse() jmap.MethodResponse { return &ChangesResponse{} }

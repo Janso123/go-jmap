@@ -22,7 +22,8 @@ var methods = map[string]MethodResponseFactory{}
 // Register a method. The Name parameter will be used when unmarshalling
 // responses to call the responseConstructor, which should generate a pointer to
 // an empty Response object of that method. This object will be returned in the
-// result set (unless there is an error)
+// result set (unless there is an error). Prefer RegisterObject for standard
+// Object methods (get/changes/query/queryChanges/set/copy).
 func RegisterMethod(name string, factory MethodResponseFactory) {
 	methods[name] = factory
 }

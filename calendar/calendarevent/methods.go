@@ -1,168 +1,77 @@
 package calendarevent
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar"
 )
 
 // Changes gets calendar event changes for the whole account.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.8
 type Changes struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	SinceState string `json:"sinceState,omitempty"`
-
-	MaxChanges uint64 `json:"maxChanges,omitempty"`
+	jmap.Changes[CalendarEvent]
 }
 
-func (m *Changes) Name() string { return "CalendarEvent/changes" }
-
-func (m *Changes) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
+// ChangesResponse is the result of CalendarEvent/changes.
+// updatedProperties is CalendarEvent-specific.
 type ChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	OldState string `json:"oldState,omitempty"`
+	OldState string `json:"oldState,omitzero"`
 
-	NewState string `json:"newState,omitempty"`
+	NewState string `json:"newState,omitzero"`
 
-	HasMoreChanges bool `json:"hasMoreChanges,omitempty"`
+	HasMoreChanges bool `json:"hasMoreChanges,omitzero"`
 
-	Created []jmap.ID `json:"created,omitempty"`
+	Created []jmap.ID `json:"created,omitzero"`
 
-	Updated []jmap.ID `json:"updated,omitempty"`
+	Updated []jmap.ID `json:"updated,omitzero"`
 
-	Destroyed []jmap.ID `json:"destroyed,omitempty"`
+	Destroyed []jmap.ID `json:"destroyed,omitzero"`
 
-	UpdatedProperties []string `json:"updatedProperties,omitempty"`
+	UpdatedProperties []string `json:"updatedProperties,omitzero"`
 }
-
-func newChangesResponse() jmap.MethodResponse { return &ChangesResponse{} }
 
 // Set creates, updates, and destroys calendar events.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.9
 type Set struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	jmap.Set[CalendarEvent]
 
-	IfInState string `json:"ifInState,omitempty"`
-
-	Create map[jmap.ID]*CalendarEvent `json:"create,omitempty"`
-
-	Update map[jmap.ID]jmap.Patch `json:"update,omitempty"`
-
-	Destroy []jmap.ID `json:"destroy,omitempty"`
-
-	SendSchedulingMessages bool `json:"sendSchedulingMessages,omitempty"`
+	SendSchedulingMessages bool `json:"sendSchedulingMessages,omitzero"`
 }
 
-func (m *Set) Name() string { return "CalendarEvent/set" }
-
-func (m *Set) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
-type SetResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	OldState string `json:"oldState,omitempty"`
-
-	NewState string `json:"newState,omitempty"`
-
-	Created map[jmap.ID]*CalendarEvent `json:"created,omitempty"`
-
-	Updated map[jmap.ID]*CalendarEvent `json:"updated,omitempty"`
-
-	Destroyed []jmap.ID `json:"destroyed,omitempty"`
-
-	NotCreated map[jmap.ID]*jmap.SetError `json:"notCreated,omitempty"`
-
-	NotUpdated map[jmap.ID]*jmap.SetError `json:"notUpdated,omitempty"`
-
-	NotDestroyed map[jmap.ID]*jmap.SetError `json:"notDestroyed,omitempty"`
-}
-
-func newSetResponse() jmap.MethodResponse { return &SetResponse{} }
+// SetResponse is the result of CalendarEvent/set.
+type SetResponse = jmap.SetResponse[CalendarEvent]
 
 // Copy events from one account to another.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.10
 type Copy struct {
-	FromAccount jmap.ID `json:"fromAccountId,omitempty"`
-
-	IfFromInState string `json:"ifFromInState,omitempty"`
-
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	IfInState string `json:"ifInState,omitempty"`
-
-	Create map[jmap.ID]*CalendarEvent `json:"create,omitempty"`
-
-	OnSuccessDestroyOriginal bool `json:"onSuccessDestroyOriginal,omitempty"`
-
-	DestroyFromIfInState string `json:"destroyFromIfInState,omitempty"`
+	jmap.Copy[CalendarEvent]
 }
 
-func (m *Copy) Name() string { return "CalendarEvent/copy" }
-
-func (m *Copy) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
-type CopyResponse struct {
-	FromAccount jmap.ID `json:"fromAccountId,omitempty"`
-
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	OldState string `json:"oldState,omitempty"`
-
-	NewState string `json:"newState,omitempty"`
-
-	Created map[jmap.ID]*CalendarEvent `json:"created,omitempty"`
-
-	NotCreated map[jmap.ID]*jmap.SetError `json:"notCreated,omitempty"`
-}
-
-func newCopyResponse() jmap.MethodResponse { return &CopyResponse{} }
+// CopyResponse is the result of CalendarEvent/copy.
+type CopyResponse = jmap.CopyResponse[CalendarEvent]
 
 // QueryChanges gets changes to a calendar event query since a given state.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.12
 type QueryChanges struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	jmap.QueryChanges[CalendarEvent]
 
-	Filter Filter `json:"filter,omitempty"`
+	Filter Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitempty"`
-
-	SinceQueryState string `json:"sinceQueryState,omitempty"`
-
-	MaxChanges uint64 `json:"maxChanges,omitempty"`
-
-	UpToID jmap.ID `json:"upToId,omitempty"`
-
-	CalculateTotal bool `json:"calculateTotal,omitempty"`
+	Sort []*SortComparator `json:"sort,omitzero"`
 }
 
-func (m *QueryChanges) Name() string { return "CalendarEvent/queryChanges" }
-
-func (m *QueryChanges) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
-
-type QueryChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	OldQueryState string `json:"oldQueryState,omitempty"`
-
-	NewQueryState string `json:"newQueryState,omitempty"`
-
-	Removed []jmap.ID `json:"removed,omitempty"`
-
-	Added []jmap.AddedItem `json:"added,omitempty"`
-}
-
-func newQueryChangesResponse() jmap.MethodResponse { return &QueryChangesResponse{} }
+// QueryChangesResponse is the result of CalendarEvent/queryChanges.
+type QueryChangesResponse = jmap.QueryChangesResponse
 
 // Parse blobs as iCalendar files to get CalendarEvent objects.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.13
 type Parse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	BlobIDs []jmap.ID `json:"blobIds,omitempty"`
+	BlobIDs []jmap.ID `json:"blobIds,omitzero"`
 
-	Properties []string `json:"properties,omitempty"`
+	Properties []string `json:"properties,omitzero"`
 }
 
 func (m *Parse) Name() string { return "CalendarEvent/parse" }
@@ -170,13 +79,13 @@ func (m *Parse) Name() string { return "CalendarEvent/parse" }
 func (m *Parse) Requires() []jmap.URI { return []jmap.URI{calendar.ParseURI} }
 
 type ParseResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	Account jmap.ID `json:"accountId,omitzero"`
 
-	Parsed map[jmap.ID][]*CalendarEvent `json:"parsed,omitempty"`
+	Parsed map[jmap.ID][]*CalendarEvent `json:"parsed,omitzero"`
 
-	NotParsable []jmap.ID `json:"notParsable,omitempty"`
+	NotParsable []jmap.ID `json:"notParsable,omitzero"`
 
-	NotFound []jmap.ID `json:"notFound,omitempty"`
+	NotFound []jmap.ID `json:"notFound,omitzero"`
 }
 
 func newParseResponse() jmap.MethodResponse { return &ParseResponse{} }

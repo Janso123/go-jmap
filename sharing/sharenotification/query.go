@@ -1,51 +1,19 @@
 package sharenotification
 
-import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/sharing"
-)
+import "github.com/Janso123/go-jmap"
 
 // Get a list of share notification IDs based on filter and sort criteria.
 // https://www.rfc-editor.org/rfc/rfc9670.html#section-3.4
 type Query struct {
-	Account jmap.ID `json:"accountId,omitempty"`
+	jmap.Query[ShareNotification]
 
-	Filter Filter `json:"filter,omitempty"`
+	Filter Filter `json:"filter,omitzero"`
 
-	Sort []*SortComparator `json:"sort,omitempty"`
-
-	Position int64 `json:"position,omitempty"`
-
-	Anchor jmap.ID `json:"anchor,omitempty"`
-
-	AnchorOffset int64 `json:"anchorOffset,omitempty"`
-
-	Limit uint64 `json:"limit,omitempty"`
-
-	CalculateTotal bool `json:"calculateTotal,omitempty"`
+	Sort []*SortComparator `json:"sort,omitzero"`
 }
 
-func (m *Query) Name() string { return "ShareNotification/query" }
-
-func (m *Query) Requires() []jmap.URI { return []jmap.URI{sharing.URI} }
-
-type QueryResponse struct {
-	Account jmap.ID `json:"accountId,omitempty"`
-
-	QueryState string `json:"queryState,omitempty"`
-
-	CanCalculateChanges bool `json:"canCalculateChanges,omitempty"`
-
-	Position uint64 `json:"position,omitempty"`
-
-	IDs []jmap.ID `json:"ids,omitempty"`
-
-	Total int64 `json:"total,omitempty"`
-
-	Limit uint64 `json:"limit,omitempty"`
-}
-
-func newQueryResponse() jmap.MethodResponse { return &QueryResponse{} }
+// QueryResponse is the result of ShareNotification/query.
+type QueryResponse = jmap.QueryResponse
 
 type SortComparator struct {
 	// The name of the property on the ShareNotification objects to compare.

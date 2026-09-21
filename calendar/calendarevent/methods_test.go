@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -224,7 +224,7 @@ func TestQueryChangesInvoke(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/queryChanges",{"accountId":"u1","filter":{"uid":"urn:uuid:ev1"},"sort":[{"property":"start","isAscending":true}],"sinceQueryState":"q1","maxChanges":10},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":10,"filter":{"uid":"urn:uuid:ev1"},"sort":[{"property":"start","isAscending":true}]},"0"]]}`,
 		string(data))
 }
 

@@ -23,6 +23,6 @@ func TestQuery(t *testing.T) {
 	}
 	data, err := json.Marshal(query)
 	assert.NoError(err)
-	expected := `{"accountId":"xyz","filter":{"name":"Inbox"},"sort":[{"property":"name","isAscending":false}],"limit":10}`
+	expected := `{"accountId":"xyz","limit":10,"filter":{"name":"Inbox"},"sort":[{"property":"name","isAscending":false}]}`
 	assert.Equal(expected, string(data))
 }

@@ -13,3 +13,9 @@ func TestFilter(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "{}", string(data))
 }
+
+func TestFilterWithAttachmentMarshal(t *testing.T) {
+	data, err := json.Marshal(WithAttachment())
+	assert.NoError(t, err)
+	assert.Equal(t, `{"hasAttachment":true}`, string(data))
+}

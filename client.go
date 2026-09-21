@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strings"
 	"sync"
@@ -17,21 +18,51 @@ import (
 // A JMAP Client
 type Client struct {
 	sync.Mutex
-	// The HttpClient.Client to use for requests. The HttpClient.Client should handle
-	// authentication. Calling WithBasicAuth or WithAccessToken on the
-	// Client will set the HttpClient to one which uses authentication
+	// HttpClient is used for requests. It should typically handle authentication.
+	// WithBasicAuth and WithAccessToken replace HttpClient with an oauth2-backed
+	// client; see those methods and NewClient option order docs. If nil,
+	// http.DefaultClient is used via httpClient().
 	HttpClient *http.Client
 
-	// The JMAP Session Resource Endpoint. If the client detects the Session
-	// object needs refetching, it will automatically do so.
+	// SessionEndpoint is the JMAP Session Resource URL (RFC 8620 §2).
+	// Do marks the session stale when a response's sessionState differs from
+	// the cached Session; it does not refetch. Check SessionStale and call
+	// RefreshSession(ctx) to reload apiUrl / capabilities.
 	SessionEndpoint string
 
-	// the JMAP Session object
+	// UserAgent is sent on Authenticate and Do requests. NewClient sets a
+	// default of "go-jmap/" + Version.
+	UserAgent string
+
+	// Session is the cached JMAP Session object from Authenticate / RefreshSession.
 	Session *Session
+
+	sessionStale bool
+
+	// OnSessionChange is called after a successful RefreshSession when a
+	// previous Session existed. old is the Session before refresh; new is
+	// the Session after Authenticate.
+	OnSessionChange func(old, new *Session)
 }
 
-// Set the HttpClient to a client which authenticates using the provided
-// username and password
+func (c *Client) httpClient() *http.Client {
+	if c.HttpClient == nil {
+		return http.DefaultClient
+	}
+	return c.HttpClient
+}
+
+func (c *Client) userAgent() string {
+	if c.UserAgent != "" {
+		return c.UserAgent
+	}
+	return "go-jmap/" + Version
+}
+
+// WithBasicAuth replaces HttpClient with a client that sends HTTP Basic auth.
+// Any previously set HttpClient (custom transport, timeout, CheckRedirect) is
+// discarded. Prefer applying auth before WithTimeout / WithTrustedHosts when
+// using NewClient options.
 func (c *Client) WithBasicAuth(username string, password string) *Client {
 	ctx := context.Background()
 	auth := username + ":" + password
@@ -44,8 +75,10 @@ func (c *Client) WithBasicAuth(username string, password string) *Client {
 	return c
 }
 
-// Set the HttpClient to a client which authenticates using the provided Access
-// Token
+// WithAccessToken replaces HttpClient with a client that sends a Bearer token.
+// Any previously set HttpClient (custom transport, timeout, CheckRedirect) is
+// discarded. Prefer applying auth before WithTimeout / WithTrustedHosts when
+// using NewClient options.
 func (c *Client) WithAccessToken(token string) *Client {
 	ctx := context.Background()
 	t := &oauth2.Token{
@@ -57,32 +90,47 @@ func (c *Client) WithAccessToken(token string) *Client {
 	return c
 }
 
+// PrimaryAccount returns the primary account ID for the given capability URI.
+func (c *Client) PrimaryAccount(uri URI) (ID, error) {
+	if c.Session == nil {
+		return "", fmt.Errorf("session not loaded")
+	}
+	id, ok := c.Session.PrimaryAccounts[uri]
+	if !ok || id == "" {
+		return "", fmt.Errorf("no primary account for %s", uri)
+	}
+	return id, nil
+}
+
 // Authenticate authenticates the client and retrieves the Session object.
 // Authenticate will be called automatically when Do is called if the Session
 // object hasn't already been initialized. Call Authenticate before any requests
 // if you need to access information from the Session object prior to the first
 // request
-func (c *Client) Authenticate() error {
+func (c *Client) Authenticate(ctx context.Context) error {
 	c.Lock()
 	if c.SessionEndpoint == "" {
 		c.Unlock()
 		return fmt.Errorf("no session url is set")
 	}
+	endpoint := c.SessionEndpoint
 	c.Unlock()
 
-	req, err := http.NewRequest("GET", c.SessionEndpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", c.userAgent())
 
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.httpClient().Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("couldn't authenticate")
+		return decodeHttpError(resp)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -91,7 +139,7 @@ func (c *Client) Authenticate() error {
 	}
 
 	s := &Session{}
-	err = json.Unmarshal(data, s)
+	err = jsonv2.Unmarshal(data, s)
 	if err != nil {
 		return err
 	}
@@ -103,15 +151,43 @@ func (c *Client) Authenticate() error {
 	return nil
 }
 
+// SessionStale reports whether the last Do response indicated a different
+// sessionState than the cached Session. The client does not refresh
+// automatically; call RefreshSession when this is true.
+func (c *Client) SessionStale() bool {
+	c.Lock()
+	defer c.Unlock()
+	return c.sessionStale
+}
+
+// RefreshSession re-fetches the Session via Authenticate, clears the stale
+// flag, and invokes OnSessionChange when a previous Session existed.
+// Call this when SessionStale is true (or whenever you need a fresh Session).
+func (c *Client) RefreshSession(ctx context.Context) error {
+	old := c.Session
+	if err := c.Authenticate(ctx); err != nil {
+		return err
+	}
+	c.Lock()
+	c.sessionStale = false
+	c.Unlock()
+	if c.OnSessionChange != nil && old != nil {
+		c.OnSessionChange(old, c.Session)
+	}
+	return nil
+}
+
 // The core capabilty must be included in all method calls
 const CoreURI URI = "urn:ietf:params:jmap:core"
 
-// Do performs a JMAP request and returns the response
-func (c *Client) Do(req *Request) (*Response, error) {
+// Do performs a JMAP request and returns the response. Prefer the ctx
+// parameter for cancellation; if req.Context is also set and ctx is
+// background-only, req.Context is used as a fallback.
+func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 	c.Lock()
 	if c.Session == nil {
 		c.Unlock()
-		err := c.Authenticate()
+		err := c.Authenticate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -141,22 +217,30 @@ func (c *Client) Do(req *Request) (*Response, error) {
 			return nil, fmt.Errorf("server doesn't support required capability '%s'", uri)
 		}
 	}
+	apiURL := c.Session.APIURL
 	c.Unlock()
 
-	body, err := json.Marshal(req)
+	body, err := jsonv2.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-	if req.Context == nil {
-		req.Context = context.Background()
+	reqCtx := ctx
+	if reqCtx == nil {
+		if req.Context != nil {
+			reqCtx = req.Context
+		} else {
+			reqCtx = context.Background()
+		}
 	}
-	httpReq, err := http.NewRequestWithContext(req.Context, "POST", c.Session.APIURL, bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(reqCtx, "POST", apiURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("User-Agent", c.userAgent())
 
-	httpResp, err := c.HttpClient.Do(httpReq)
+	httpResp, err := c.httpClient().Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
@@ -171,35 +255,43 @@ func (c *Client) Do(req *Request) (*Response, error) {
 		return nil, err
 	}
 	resp := &Response{}
-	err = json.Unmarshal(data, resp)
+	err = jsonv2.Unmarshal(data, resp)
 	if err != nil {
 		return nil, fmt.Errorf("error? %v", err)
 	}
 
+	c.Lock()
+	if c.Session != nil && resp.SessionState != "" && resp.SessionState != c.Session.State {
+		c.sessionStale = true
+	}
+	c.Unlock()
+
 	return resp, nil
+}
+
+// DownloadOptions controls URL template substitution for Download.
+// Empty Name defaults to "filename"; empty Type defaults to
+// "application/octet-stream".
+type DownloadOptions struct {
+	Name string
+	Type string
 }
 
 // Upload sends binary data to the server and returns blob ID and some
 // associated meta-data.
 //
-// There are some caveats to keep in mind:
-// - Server may return the same blob ID for multiple uploads of the same blob.
-// - Blob ID may become invalid after some time if it is unused.
-// - Blob ID is usable only by the uploader until it is used, even for shared accounts.
-func (c *Client) Upload(accountID ID, blob io.Reader) (*UploadResponse, error) {
-	return c.UploadWithContext(context.Background(), accountID, blob)
-}
-
-// UploadWithContext sends binary data to the server and returns blob ID and
-// some associated meta-data.
+// contentType is sent as the request Content-Type. If empty, it defaults
+// to "application/octet-stream".
 //
 // There are some caveats to keep in mind:
 // - Server may return the same blob ID for multiple uploads of the same blob.
 // - Blob ID may become invalid after some time if it is unused.
 // - Blob ID is usable only by the uploader until it is used, even for shared accounts.
-func (c *Client) UploadWithContext(
-	ctx context.Context, accountID ID, blob io.Reader,
-) (*UploadResponse, error) {
+func (c *Client) Upload(ctx context.Context, accountID ID, blob io.Reader, contentType string) (*UploadResponse, error) {
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
 	c.Lock()
 	if c.SessionEndpoint == "" {
 		c.Unlock()
@@ -207,7 +299,7 @@ func (c *Client) UploadWithContext(
 	}
 	if c.Session == nil {
 		c.Unlock()
-		err := c.Authenticate()
+		err := c.Authenticate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -221,9 +313,10 @@ func (c *Client) UploadWithContext(
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("User-Agent", c.userAgent())
 
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.httpClient().Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +332,7 @@ func (c *Client) UploadWithContext(
 	}
 
 	info := &UploadResponse{}
-	err = json.Unmarshal(data, info)
+	err = jsonv2.Unmarshal(data, info)
 	if err != nil {
 		return nil, err
 	}
@@ -248,14 +341,18 @@ func (c *Client) UploadWithContext(
 }
 
 // Download downloads binary data by its Blob ID from the server.
-func (c *Client) Download(accountID ID, blobID ID) (io.ReadCloser, error) {
-	return c.DownloadWithContext(context.Background(), accountID, blobID)
-}
+// opts.Name and opts.Type are substituted into the session downloadUrl
+// template ({name}, {type}); see DownloadOptions for defaults.
+func (c *Client) Download(ctx context.Context, accountID ID, blobID ID, opts DownloadOptions) (io.ReadCloser, error) {
+	name := opts.Name
+	if name == "" {
+		name = "filename"
+	}
+	typ := opts.Type
+	if typ == "" {
+		typ = "application/octet-stream"
+	}
 
-// DownloadWithContext downloads binary data by its Blob ID from the server.
-func (c *Client) DownloadWithContext(
-	ctx context.Context, accountID ID, blobID ID,
-) (io.ReadCloser, error) {
 	c.Lock()
 	if c.SessionEndpoint == "" {
 		c.Unlock()
@@ -263,7 +360,7 @@ func (c *Client) DownloadWithContext(
 	}
 	if c.Session == nil {
 		c.Unlock()
-		err := c.Authenticate()
+		err := c.Authenticate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -274,8 +371,8 @@ func (c *Client) DownloadWithContext(
 	urlRepl := strings.NewReplacer(
 		"{accountId}", string(accountID),
 		"{blobId}", string(blobID),
-		"{type}", "application/octet-stream",
-		"{name}", "filename",
+		"{type}", typ,
+		"{name}", name,
 	)
 	tgtUrl := urlRepl.Replace(c.Session.DownloadURL)
 	c.Unlock()
@@ -284,8 +381,9 @@ func (c *Client) DownloadWithContext(
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", c.userAgent())
 
-	resp, err := c.HttpClient.Do(req)
+	resp, err := c.httpClient().Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -298,17 +396,15 @@ func (c *Client) DownloadWithContext(
 }
 
 func decodeHttpError(resp *http.Response) error {
-	contentType := resp.Header.Get("Content-Type")
-	if contentType != "application/json" {
-		return fmt.Errorf("HTTP %d %s", resp.StatusCode, resp.Status)
+	mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if mt == "application/problem+json" || mt == "application/json" {
+		var re RequestError
+		if err := jsonv2.UnmarshalRead(resp.Body, &re); err == nil && re.Type != "" {
+			re.Status = resp.StatusCode
+			return &re
+		}
 	}
-
-	reqErr := &RequestError{}
-	if err := json.NewDecoder(resp.Body).Decode(reqErr); err != nil {
-		return fmt.Errorf("HTTP %d %s (failed to decode JSON body: %v)", resp.StatusCode, resp.Status, err)
-	}
-
-	return reqErr
+	return fmt.Errorf("HTTP %s", resp.Status)
 }
 
 // UploadResponse is the object returned in response to blob upload.

@@ -3,8 +3,8 @@ package calendarevent
 import (
 	"encoding/json"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 )
 
 // CalendarEvent is a JSCalendar Event with JMAP Calendars metadata.

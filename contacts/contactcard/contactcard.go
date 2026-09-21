@@ -3,17 +3,22 @@ package contactcard
 import (
 	"encoding/json"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/contacts/jscontact"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/contacts"
+	"github.com/Janso123/go-jmap/contacts/jscontact"
 )
 
 func init() {
-	jmap.RegisterMethod("ContactCard/get", newGetResponse)
-	jmap.RegisterMethod("ContactCard/changes", newChangesResponse)
-	jmap.RegisterMethod("ContactCard/query", newQueryResponse)
-	jmap.RegisterMethod("ContactCard/queryChanges", newQueryChangesResponse)
-	jmap.RegisterMethod("ContactCard/set", newSetResponse)
-	jmap.RegisterMethod("ContactCard/copy", newCopyResponse)
+	jmap.RegisterObject[ContactCard](
+		jmap.MethodGet |
+			jmap.MethodChanges |
+			jmap.MethodQuery |
+			jmap.MethodQueryChanges |
+			jmap.MethodSet |
+			jmap.MethodCopy,
+	)
+	// ContactCard/changes includes updatedProperties; override kit factory.
+	jmap.RegisterMethod("ContactCard/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 // ContactCard is a JSContact card with JMAP ContactCard metadata.
@@ -25,6 +30,10 @@ type ContactCard struct {
 
 	jscontact.Card
 }
+
+func (ContactCard) JMAPType() string { return "ContactCard" }
+
+func (ContactCard) Requires() []jmap.URI { return []jmap.URI{contacts.URI} }
 
 func (c ContactCard) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(c.Card)

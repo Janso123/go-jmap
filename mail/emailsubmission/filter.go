@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 type Filter interface {

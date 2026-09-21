@@ -1,7 +1,7 @@
 package blob
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 // Copy a binary blob from one account to another

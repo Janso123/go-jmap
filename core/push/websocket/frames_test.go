@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/core"
-	_ "git.sr.ht/~rockorager/go-jmap/core"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/core"
+	_ "github.com/Janso123/go-jmap/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,6 +63,13 @@ func TestDecodeServerFrames(t *testing.T) {
 	assert.Equal(t, "R2", fr.RequestID)
 	assert.Equal(t, 400, fr.RequestError.Status)
 	assert.Equal(t, "bad", fr.RequestError.Detail)
+
+	alertRaw := `{"@type":"CalendarAlert","accountId":"a","calendarEventId":"e","uid":"u","alertId":"al"}`
+	fr, err = decodeServerFrame([]byte(alertRaw))
+	require.NoError(t, err)
+	require.NotNil(t, fr.CalendarAlert)
+	assert.Equal(t, jmap.ID("e"), fr.CalendarAlert.CalendarEventID)
+	assert.Equal(t, "al", fr.CalendarAlert.AlertID)
 }
 
 func TestDecodeUnknownFrame(t *testing.T) {

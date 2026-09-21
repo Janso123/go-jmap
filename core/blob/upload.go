@@ -3,7 +3,7 @@ package blob
 import (
 	"encoding/json"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 // Upload binary blobs using JMAP method calls.

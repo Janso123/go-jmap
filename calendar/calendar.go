@@ -1,8 +1,8 @@
 package calendar
 
 import (
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/calendar/jscalendar"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/calendar/jscalendar"
 )
 
 const (
@@ -14,6 +14,16 @@ const (
 
 	// AvailabilityURI is the principals availability capability.
 	AvailabilityURI jmap.URI = "urn:ietf:params:jmap:principals:availability"
+
+	// CalendarEvent is the CalendarEvent push/data type.
+	CalendarEvent jmap.EventType = "CalendarEvent"
+
+	// CalendarAlertEvent is the CalendarAlert push/data type
+	// (SSE event: calendarAlert).
+	CalendarAlertEvent jmap.EventType = "CalendarAlert"
+
+	// ParticipantIdentity is the ParticipantIdentity push/data type.
+	ParticipantIdentity jmap.EventType = "ParticipantIdentity"
 )
 
 func init() {

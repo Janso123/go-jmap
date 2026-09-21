@@ -1,6 +1,6 @@
 package core
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 // The Core/echo method
 type Echo struct {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,6 +24,6 @@ func TestQueryChangesInvoke(t *testing.T) {
 	data, err := json.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["Principal/queryChanges",{"accountId":"u1","filter":{"email":"jane@example.com"},"sort":[{"property":"email","isAscending":false}],"sinceQueryState":"s1","maxChanges":50},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["Principal/queryChanges",{"accountId":"u1","sinceQueryState":"s1","maxChanges":50,"filter":{"email":"jane@example.com"},"sort":[{"property":"email","isAscending":false}]},"0"]]}`,
 		string(data))
 }

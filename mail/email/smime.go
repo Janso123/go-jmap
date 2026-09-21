@@ -1,6 +1,6 @@
 package email
 
-import "git.sr.ht/~rockorager/go-jmap"
+import "github.com/Janso123/go-jmap"
 
 const SMIMEVerify jmap.URI = "urn:ietf:params:jmap:smimeverify"
 

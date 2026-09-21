@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 // Get binary blob data and metadata.

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"git.sr.ht/~rockorager/go-jmap"
+	"github.com/Janso123/go-jmap"
 )
 
 func TestDialH2ConnectReturnsUnsupported(t *testing.T) {

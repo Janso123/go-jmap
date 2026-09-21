@@ -1,8 +1,14 @@
-# go-jmap (fork)
+# go-jmap
 
-A JMAP client library for Go, brought up to current
+A standalone JMAP client library for Go, based on
+[`git.sr.ht/~rockorager/go-jmap`](https://git.sr.ht/~rockorager/go-jmap)
+(foxcpp lineage), brought up to current
 [JMAP RFC / jmap.io](https://jmap.io/spec.html) coverage for mail-client use
 (WebSocket, published extensions, contacts, calendars drafts, and related fixes).
+
+**This is an independent fork.** It is **not API-compatible since
+`v1.0.0-alpha`** (module path, generics, json/v2, and related breaking changes).
+Do not treat rockorager imports as a drop-in for this project’s v1 line.
 
 ## Lineage
 
@@ -10,22 +16,13 @@ This is a **fork of a fork**:
 
 1. Originally [github.com/foxcpp/go-jmap](https://github.com/foxcpp/go-jmap)
 2. Continued as [`git.sr.ht/~rockorager/go-jmap`](https://git.sr.ht/~rockorager/go-jmap)
-   (upstream here) — Core (RFC 8620), Mail (RFC 8621), MDN, S/MIME verify
-3. **This repository** extends that tree to fuller current RFC / jmap.io coverage
+   — Core (RFC 8620), Mail (RFC 8621), MDN, S/MIME verify
+3. **This repository** (`github.com/Janso123/go-jmap`) extends that tree to
+   fuller current RFC / jmap.io coverage and continues as an independent library
 
-We keep the upstream module path (`git.sr.ht/~rockorager/go-jmap`) so consumers
-can switch with a `replace` or by changing the remote once upstream catches up.
-
-## Maintenance policy
-
-We **actively maintain this fork** (bugs, features, RFC catch-up) **until**
-upstream merges equivalent work or otherwise provides the same coverage.
-
-**When upstream catches up / absorbs this work, maintenance of this fork stops.**
-Consumers should then switch back to
-[`git.sr.ht/~rockorager/go-jmap`](https://git.sr.ht/~rockorager/go-jmap).
-Until that happens, treat this fork as the source of truth for the additions
-below.
+Optional cherry-picks from rockorager remain useful for shared fixes (for
+example Blob upload 2xx, stable `mergeURIs`). Upstream is not a product
+destination for this fork.
 
 ## What this fork adds
 
@@ -39,43 +36,60 @@ below.
 **Not in this fork yet:** HTTP/2 Extended CONNECT (RFC 8887 §4.2) — API stub returns
 `ErrH2ConnectUnsupported` until [`coder/websocket#4`](https://github.com/coder/websocket/issues/4).
 
+## Alpha caveats (`v1.0.0-alpha`)
+
+This line is an **alpha** independent fork. Expect API polish and draft-pinned calendar
+types to move before a stable `v1` tag.
+
+| Caveat | Detail |
+|--------|--------|
+| **No auto session refresh** | `Do` only sets stale when `sessionState` changes; call `SessionStale()` / `RefreshSession(ctx)` yourself |
+| **Auth option order** | `WithBearer` / `WithBasic` replace `HttpClient`; apply auth before `WithTimeout` / `WithTrustedHosts`, or use a pre-authenticated client via `WithHTTPClient` alone |
+| **Bool filter `false` holes** | Mailbox/Email typed filters cannot emit `false` for `isSubscribed` / `hasAttachment`-style bools (`omitzero`); use a raw filter if needed |
+| **No H2 CONNECT** | `DialH2Connect` is a stub (`ErrH2ConnectUnsupported`); use HTTP/1.1 WebSocket upgrade |
+| **Partial calendars** | JMAP Calendars / JSCalendar stay **Partial** on pinned IETF drafts until RFCs ship |
+| **No thin one-shots** | Typed method structs + `Client.Do` / `websocket.Conn.Do` only; no high-level one-shot helpers yet |
+| **SearchSnippet/get Name** | Fixed (was incorrectly `Mailbox/get`) |
+| **Coverage** | Spec matrix below; package JSON/roundtrip and method registration tests under `go test -race ./...` |
+
 ## Module path / import
 
-Keep the upstream module path (do not rewrite):
-
 ```text
-git.sr.ht/~rockorager/go-jmap
+github.com/Janso123/go-jmap
 ```
+
+Not a drop-in for rockorager imports (`git.sr.ht/~rockorager/go-jmap`). Tag
+`v0.5.99-legacy` marks the last rockorager-path tip.
 
 Local `replace` (example):
 
 ```go
-replace git.sr.ht/~rockorager/go-jmap => ../../forks/go-jmap
+replace github.com/Janso123/go-jmap => ../../forks/go-jmap
 ```
 
-Go **1.23+** (required by `github.com/coder/websocket` v1.8.x).
+Go **1.27+** (toolchain `go1.27.1`; required by `github.com/coder/websocket` v1.8.x).
 
 Blank-import packages whose `init()` registers capabilities/methods before
 `Client.Do` / `websocket.Conn.Do`:
 
 ```go
 import (
-	_ "git.sr.ht/~rockorager/go-jmap/core"
-	_ "git.sr.ht/~rockorager/go-jmap/core/blob"
-	_ "git.sr.ht/~rockorager/go-jmap/core/push/vapid"
-	_ "git.sr.ht/~rockorager/go-jmap/quota"
-	_ "git.sr.ht/~rockorager/go-jmap/sharing"
-	_ "git.sr.ht/~rockorager/go-jmap/sharing/principal"
-	_ "git.sr.ht/~rockorager/go-jmap/sharing/sharenotification"
-	_ "git.sr.ht/~rockorager/go-jmap/mail/sieve"
-	_ "git.sr.ht/~rockorager/go-jmap/contacts"
-	_ "git.sr.ht/~rockorager/go-jmap/contacts/addressbook"
-	_ "git.sr.ht/~rockorager/go-jmap/contacts/contactcard"
-	_ "git.sr.ht/~rockorager/go-jmap/calendar"
-	_ "git.sr.ht/~rockorager/go-jmap/calendar/calendars"
-	_ "git.sr.ht/~rockorager/go-jmap/calendar/calendarevent"
-	_ "git.sr.ht/~rockorager/go-jmap/calendar/participantidentity"
-	_ "git.sr.ht/~rockorager/go-jmap/calendar/calendareventnotification"
+	_ "github.com/Janso123/go-jmap/core"
+	_ "github.com/Janso123/go-jmap/core/blob"
+	_ "github.com/Janso123/go-jmap/core/push/vapid"
+	_ "github.com/Janso123/go-jmap/quota"
+	_ "github.com/Janso123/go-jmap/sharing"
+	_ "github.com/Janso123/go-jmap/sharing/principal"
+	_ "github.com/Janso123/go-jmap/sharing/sharenotification"
+	_ "github.com/Janso123/go-jmap/mail/sieve"
+	_ "github.com/Janso123/go-jmap/contacts"
+	_ "github.com/Janso123/go-jmap/contacts/addressbook"
+	_ "github.com/Janso123/go-jmap/contacts/contactcard"
+	_ "github.com/Janso123/go-jmap/calendar"
+	_ "github.com/Janso123/go-jmap/calendar/calendars"
+	_ "github.com/Janso123/go-jmap/calendar/calendarevent"
+	_ "github.com/Janso123/go-jmap/calendar/participantidentity"
+	_ "github.com/Janso123/go-jmap/calendar/calendareventnotification"
 )
 ```
 
@@ -90,25 +104,30 @@ Card/Event values; they do not register JMAP methods on their own.
 package main
 
 import (
+	"context"
 	"fmt"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/mail"
-	"git.sr.ht/~rockorager/go-jmap/mail/email"
-	"git.sr.ht/~rockorager/go-jmap/mail/mailbox"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/mail"
+	"github.com/Janso123/go-jmap/mail/email"
+	"github.com/Janso123/go-jmap/mail/mailbox"
 )
 
 func main() {
-	client := &jmap.Client{
-		SessionEndpoint: "https://api.fastmail.com/jmap/session",
-	}
-	client.WithAccessToken("my-access-token")
+	client := jmap.NewClient(
+		"https://api.fastmail.com/jmap/session",
+		jmap.WithBearer("my-access-token"),
+	)
 
-	if err := client.Authenticate(); err != nil {
+	ctx := context.Background()
+	if err := client.Authenticate(ctx); err != nil {
 		// handle
 	}
 
-	id := client.Session.PrimaryAccounts[mail.URI]
+	id, err := client.PrimaryAccount(mail.URI)
+	if err != nil {
+		// handle
+	}
 	req := &jmap.Request{}
 	req.Invoke(&mailbox.Get{Account: id})
 	callID := req.Invoke(&email.Changes{
@@ -124,7 +143,7 @@ func main() {
 		},
 	})
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(ctx, req)
 	if err != nil {
 		// handle
 	}
@@ -152,9 +171,9 @@ import (
 	"context"
 	"time"
 
-	"git.sr.ht/~rockorager/go-jmap"
-	"git.sr.ht/~rockorager/go-jmap/core/push/websocket"
-	_ "git.sr.ht/~rockorager/go-jmap/core"
+	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/core/push/websocket"
+	_ "github.com/Janso123/go-jmap/core"
 )
 
 conn, err := websocket.Dial(ctx, client, websocket.Options{
@@ -226,15 +245,14 @@ intentionally incomplete · **Blocked** = known transport gap.
 
 | Remote | URL |
 |--------|-----|
-| `upstream` | `https://git.sr.ht/~rockorager/go-jmap` |
+| `upstream` | `https://git.sr.ht/~rockorager/go-jmap` (cherry-picks only) |
 | `origin` (this fork) | `https://github.com/Janso123/go-jmap.git` |
 
-Do not rewrite the module path. See **Maintenance policy** above.
+### Optional upstream contributions (sourcehut)
 
-### Contributing upstream (sourcehut)
-
-Upstream is on [sourcehut](https://sr.ht/~rockorager/go-jmap/): patches via email,
-not GitHub PRs against the canonical repo.
+Selected fixes may still be offered upstream via [sourcehut](https://sr.ht/~rockorager/go-jmap/)
+patches (email), not GitHub PRs against the canonical rockorager repo. That is
+optional collaboration, not a goal to dissolve this fork.
 
 1. Open or reference a [ticket](https://todo.sr.ht/~rockorager/go-jmap) if useful.
 2. Send a patch series to **[~rockorager/go-jmap-devel](https://lists.sr.ht/~rockorager/go-jmap-devel)**
@@ -246,7 +264,7 @@ not GitHub PRs against the canonical repo.
 
 ### Recommended upstream series (phased)
 
-Do **not** dump the entire fork (~30+ commits spanning WS + every extension) in
+Do **not** dump the entire tree (~30+ commits spanning WS + every extension) in
 one patchset — unlikely to review or land.
 
 | Phase | Scope | Why first |
@@ -260,9 +278,15 @@ License allows redistribution and contribution under MIT (keep copyright notices
 
 ## Tests
 
+Race suite (CI equivalent):
+
 ```bash
-go test ./...
+go test -race -count=1 ./...
 ```
+
+Core mail/push packages include JSON roundtrip and method-registration checks
+(PushSubscription, Identity, Thread, SearchSnippet, MDN, EmailSubmission, and
+related kits). Calendar stays Partial — draft pins, not full Task/Group surface.
 
 ## License
 
