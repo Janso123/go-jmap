@@ -23,7 +23,7 @@ func TestVacationFromDateUTC(t *testing.T) {
 
 func TestVacationIsEnabledFalse(t *testing.T) {
 	t.Parallel()
-	v := vacationresponse.VacationResponse{IsEnabled: jmap.Bool(false)}
+	v := vacationresponse.VacationResponse{IsEnabled: new(false)}
 	b, err := jsonv2.Marshal(v)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"isEnabled":false}`, string(b))

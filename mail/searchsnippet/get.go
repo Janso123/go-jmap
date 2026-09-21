@@ -10,7 +10,7 @@ import (
 type Get struct {
 	Account jmap.ID `json:"accountId,omitempty"`
 
-	Filter interface{} `json:"filter,omitempty"`
+	Filter any `json:"filter,omitempty"`
 
 	EmailIDs []jmap.ID `json:"emailIds,omitempty"`
 

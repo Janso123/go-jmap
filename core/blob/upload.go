@@ -35,7 +35,7 @@ type DataSource struct {
 }
 
 func (s DataSource) MarshalJSON() ([]byte, error) {
-	raw := map[string]interface{}{}
+	raw := map[string]any{}
 	if s.AsText != nil {
 		raw["data:asText"] = s.AsText
 	}

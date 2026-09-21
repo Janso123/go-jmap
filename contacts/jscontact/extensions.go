@@ -52,8 +52,7 @@ func deleteKnownJSONFields(raw map[string]json.RawMessage, typ reflect.Type) {
 		return
 	}
 
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
+	for field := range typ.Fields() {
 		if field.Anonymous {
 			if name, ok := taggedJSONFieldName(field); ok {
 				delete(raw, name)

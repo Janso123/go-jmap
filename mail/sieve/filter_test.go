@@ -9,12 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func boolPtr(v bool) *bool { return &v }
+//go:fix inline
+func boolPtr(v bool) *bool { return new(v) }
 
 func TestFilterConditionMarshal(t *testing.T) {
 	data, err := json.Marshal(&FilterCondition{
 		Name:     "vacation",
-		IsActive: boolPtr(true),
+		IsActive: new(true),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, `{"name":"vacation","isActive":true}`, string(data))
@@ -25,7 +26,7 @@ func TestFilterOperatorMarshal(t *testing.T) {
 		Operator: jmap.OperatorAND,
 		Conditions: []Filter{
 			&FilterCondition{Name: "vacation"},
-			&FilterCondition{IsActive: boolPtr(true)},
+			&FilterCondition{IsActive: new(true)},
 		},
 	})
 	require.NoError(t, err)
@@ -36,7 +37,7 @@ func TestFilterOperatorMarshal(t *testing.T) {
 
 func TestFilterConditionMarshalInactive(t *testing.T) {
 	data, err := json.Marshal(&FilterCondition{
-		IsActive: boolPtr(false),
+		IsActive: new(false),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, `{"isActive":false}`, string(data))

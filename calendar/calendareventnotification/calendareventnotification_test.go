@@ -11,7 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func boolPtr(v bool) *bool { return &v }
+//go:fix inline
+func boolPtr(v bool) *bool { return new(v) }
 
 func TestCalendarEventNotificationMarshal(t *testing.T) {
 	created := time.Date(2026, time.September, 19, 16, 0, 0, 0, time.UTC)
@@ -32,7 +33,7 @@ func TestCalendarEventNotificationMarshal(t *testing.T) {
 		},
 		Type:            TypeUpdated,
 		CalendarEventID: "ev1",
-		IsDraft:         boolPtr(true),
+		IsDraft:         new(true),
 		Event: &jscalendar.Event{
 			UID:   "urn:uuid:ev1",
 			Title: "Planning",

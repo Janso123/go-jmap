@@ -16,11 +16,9 @@ func TestContactCardJSON(t *testing.T) {
 		AddressBookIDs: map[jmap.ID]bool{
 			"ab1": true,
 		},
-		Card: jscontact.Card{
-			UID: "urn:uuid:ada",
-			Name: &jscontact.Name{
-				Full: "Ada Lovelace",
-			},
+		UID: "urn:uuid:ada",
+		Name: &jscontact.Name{
+			Full: "Ada Lovelace",
 		},
 	}
 

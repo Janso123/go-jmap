@@ -28,5 +28,5 @@ func TestDescComparator(t *testing.T) {
 }
 
 func TestBoolPtrFalse(t *testing.T) {
-	require.False(t, *jmap.Bool(false))
+	require.False(t, *new(false))
 }

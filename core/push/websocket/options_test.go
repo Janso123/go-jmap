@@ -124,7 +124,7 @@ func TestDialURLMaxConcurrentRequests(t *testing.T) {
 
 	ctx := context.Background()
 	done := make(chan error, 2)
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		go func() {
 			req := &jmap.Request{}
 			req.Invoke(&core.Echo{Hello: "x"})

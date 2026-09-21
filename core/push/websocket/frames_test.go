@@ -16,7 +16,7 @@ func TestMarshalWSRequest(t *testing.T) {
 	req.Invoke(&core.Echo{Hello: "world"})
 	raw, err := marshalRequest("R1", req)
 	require.NoError(t, err)
-	var m map[string]interface{}
+	var m map[string]any
 	require.NoError(t, json.Unmarshal(raw, &m))
 	assert.Equal(t, "Request", m["@type"])
 	assert.Equal(t, "R1", m["id"])

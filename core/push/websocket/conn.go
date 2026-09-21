@@ -5,6 +5,7 @@ import (
 	jsonv2 "encoding/json/v2"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -35,7 +36,7 @@ type Conn struct {
 	pushEnabled   bool
 	pushDataTypes []jmap.EventType
 
-	nextID uint64
+	nextID atomic.Uint64
 	gate   *requestGate
 
 	readCancel context.CancelFunc
@@ -59,7 +60,7 @@ func newRequestGate(n uint64) *requestGate {
 		return nil
 	}
 	g := &requestGate{ch: make(chan struct{}, n)}
-	for i := uint64(0); i < n; i++ {
+	for range n {
 		g.ch <- struct{}{}
 	}
 	return g
@@ -258,13 +259,7 @@ func (c *Conn) Do(ctx context.Context, req *jmap.Request) (*jmap.Response, error
 		return nil, fmt.Errorf("websocket: nil request")
 	}
 
-	found := false
-	for _, uri := range req.Using {
-		if uri == jmap.CoreURI {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(req.Using, jmap.CoreURI)
 	if !found {
 		req.Using = append(req.Using, jmap.CoreURI)
 	}
@@ -283,7 +278,7 @@ func (c *Conn) Do(ctx context.Context, req *jmap.Request) (*jmap.Response, error
 	}
 	defer c.gate.release()
 
-	id := strconv.FormatUint(atomic.AddUint64(&c.nextID, 1), 10)
+	id := strconv.FormatUint(c.nextID.Add(1), 10)
 	ch := make(chan doResult, 1)
 
 	c.mu.Lock()
@@ -363,7 +358,7 @@ func (c *Conn) Close() error {
 	return err
 }
 
-func (c *Conn) writeJSON(v interface{}) error {
+func (c *Conn) writeJSON(v any) error {
 	raw, err := jsonv2.Marshal(v)
 	if err != nil {
 		return err

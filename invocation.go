@@ -12,7 +12,7 @@ type Invocation struct {
 	// The name of the method call or response
 	Name string
 	// Object containing the named arguments for the method or response
-	Args interface{}
+	Args any
 	// Arbitrary string set by client, echoed back with responses
 	CallID string
 }

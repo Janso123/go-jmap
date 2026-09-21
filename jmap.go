@@ -51,7 +51,7 @@ func NewCreationID() ID {
 
 // Patch is a JMAP patch object which can be used in set.Update calls. The keys
 // are json pointer paths, and the value is the value to set the path to.
-type Patch map[string]interface{}
+type Patch map[string]any
 
 // Operator is used when constructing FilterOperator. It MUST be "AND", "OR", or
 // "NOT"

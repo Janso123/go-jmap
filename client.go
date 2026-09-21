@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 
@@ -195,13 +196,7 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 		c.Unlock()
 	}
 	// Ensure the core capability is always included
-	found := false
-	for _, uri := range req.Using {
-		if uri == CoreURI {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(req.Using, CoreURI)
 	if !found {
 		req.Using = append(req.Using, CoreURI)
 	}

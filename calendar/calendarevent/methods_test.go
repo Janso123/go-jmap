@@ -11,11 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func idPtr(v jmap.ID) *jmap.ID { return &v }
+//go:fix inline
+func idPtr(v jmap.ID) *jmap.ID { return new(v) }
 
-func boolPtr(v bool) *bool { return &v }
+//go:fix inline
+func boolPtr(v bool) *bool { return new(v) }
 
-func calendarIDsPtr(v map[jmap.ID]bool) *map[jmap.ID]bool { return &v }
+//go:fix inline
+func calendarIDsPtr(v map[jmap.ID]bool) *map[jmap.ID]bool { return new(v) }
 
 func TestCalendarEventJSON(t *testing.T) {
 	baseID := jmap.ID("base1")
@@ -23,20 +26,18 @@ func TestCalendarEventJSON(t *testing.T) {
 	end := jscalendar.UTCDateTime("2026-03-01T09:00:00Z")
 
 	event := CalendarEvent{
-		ID:          idPtr("ev1"),
+		ID:          new(jmap.ID("ev1")),
 		BaseEventID: &baseID,
-		CalendarIDs: calendarIDsPtr(map[jmap.ID]bool{"cal1": true}),
-		IsDraft:     boolPtr(true),
-		IsOrigin:    boolPtr(true),
+		CalendarIDs: new(map[jmap.ID]bool{"cal1": true}),
+		IsDraft:     new(true),
+		IsOrigin:    new(true),
 		UTCStart:    &start,
 		UTCEnd:      &end,
-		Event: jscalendar.Event{
-			UID:      "urn:uuid:ev1",
-			Title:    "Planning",
-			Start:    "2026-03-01T09:00:00",
-			TimeZone: "Europe/Warsaw",
-			Duration: "PT1H",
-		},
+		UID:         "urn:uuid:ev1",
+		Title:       "Planning",
+		Start:       "2026-03-01T09:00:00",
+		TimeZone:    "Europe/Warsaw",
+		Duration:    "PT1H",
 	}
 
 	data, err := json.Marshal(&event)
@@ -152,8 +153,8 @@ func TestSetInvoke(t *testing.T) {
 		Account: "u1",
 		Create: map[jmap.ID]*CalendarEvent{
 			"ev1": {
-				CalendarIDs: calendarIDsPtr(map[jmap.ID]bool{"cal1": true}),
-				IsDraft:     boolPtr(true),
+				CalendarIDs: new(map[jmap.ID]bool{"cal1": true}),
+				IsDraft:     new(true),
 				Event: jscalendar.Event{
 					UID:      "urn:uuid:ev1",
 					Title:    "Planning",
@@ -186,7 +187,7 @@ func TestCopyInvoke(t *testing.T) {
 		Account:     "u2",
 		Create: map[jmap.ID]*CalendarEvent{
 			"ev1": {
-				CalendarIDs: calendarIDsPtr(map[jmap.ID]bool{"cal2": true}),
+				CalendarIDs: new(map[jmap.ID]bool{"cal2": true}),
 				Event: jscalendar.Event{
 					UID:   "urn:uuid:ev1-copy",
 					Title: "Planning copy",

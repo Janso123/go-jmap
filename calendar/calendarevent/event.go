@@ -2,6 +2,7 @@ package calendarevent
 
 import (
 	"encoding/json"
+	"maps"
 
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/calendar/jscalendar"
@@ -103,9 +104,7 @@ func (e CalendarEvent) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	for key, value := range metaObj {
-		obj[key] = value
-	}
+	maps.Copy(obj, metaObj)
 
 	return json.Marshal(obj)
 }

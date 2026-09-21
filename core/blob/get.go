@@ -47,7 +47,7 @@ type GetResult struct {
 }
 
 func (r GetResult) MarshalJSON() ([]byte, error) {
-	raw := map[string]interface{}{}
+	raw := map[string]any{}
 	if r.ID != "" {
 		raw["id"] = r.ID
 	}

@@ -11,7 +11,7 @@ type Method interface {
 }
 
 // A response to a method call
-type MethodResponse interface{}
+type MethodResponse any
 
 // A Factory function which produces a new MethodResponse object
 type MethodResponseFactory func() MethodResponse
