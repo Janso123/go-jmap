@@ -241,7 +241,7 @@ CI runs those race tests on pushes and pull requests to `main`. It does not star
 
 `e2e/` is built only with `-tags e2e`. The test process starts `stalwartlabs/stalwart:v0.16` through Docker Compose, creates `alice@example.org` and `bob@example.org`, and exercises session, mail, contacts, calendar, blob, quota, and push. It then writes `e2e/report.md` and removes the container. `go test ./...` without the tag does not start Docker.
 
-Docker is required. The suite binds `127.0.0.1:18080` and is not part of CI.
+Docker is required. The suite binds `127.0.0.1:18080`. The `e2e` job in [`.github/workflows/go.yml`](.github/workflows/go.yml) runs it on pushes to `main` and on pull requests. The unit-test job does not pass `-tags e2e` and does not start Docker.
 
 ```bash
 go test -tags e2e -count=1 -timeout 10m -v ./e2e/
