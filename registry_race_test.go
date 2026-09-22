@@ -24,20 +24,20 @@ func TestRegistryConcurrent(t *testing.T) {
 	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < n; i++ {
+		for range n {
 			jmap.RegisterMethod("Race/get", func() jmap.MethodResponse { return &struct{}{} })
 		}
 	}()
 	go func() {
 		defer wg.Done()
-		for i := 0; i < n; i++ {
+		for range n {
 			jmap.RegisterCapability(raceCap{})
 		}
 	}()
 	go func() {
 		defer wg.Done()
 		raw := []byte(`{"methodResponses":[["Race/get",{},"c0"]],"sessionState":"s"}`)
-		for i := 0; i < n; i++ {
+		for range n {
 			var resp jmap.Response
 			require.NoError(t, jsonv2.Unmarshal(raw, &resp))
 		}

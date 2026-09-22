@@ -1,7 +1,7 @@
 package jmap
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,7 @@ func TestInvocationMarshal(t *testing.T) {
 		},
 		CallID: "0",
 	}
-	data, err := json.Marshal(inv)
+	data, err := jsonv2.Marshal(inv)
 	assert.NoError(err)
 	if err != nil {
 		t.Logf("expected: no error")
@@ -43,7 +43,7 @@ func TestInvocationUnmarshal(t *testing.T) {
 	assert := assert.New(t)
 	raw := []byte(`["Test/method",{"Hello":"world"},"0"]`)
 	inv := &Invocation{}
-	err := json.Unmarshal(raw, inv)
+	err := jsonv2.Unmarshal(raw, inv)
 	assert.NoError(err)
 	assert.Equal("Test/method", inv.Name)
 	assert.Equal("0", inv.CallID)

@@ -17,8 +17,6 @@ func init() {
 			jmap.MethodSet |
 			jmap.MethodCopy,
 	)
-	// ContactCard/changes includes updatedProperties; override kit factory.
-	jmap.RegisterMethod("ContactCard/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 // ContactCard is a JSContact card with JMAP ContactCard metadata.
@@ -32,6 +30,8 @@ type ContactCard struct {
 }
 
 func (ContactCard) JMAPType() string { return "ContactCard" }
+
+func (ContactCard) JMAPCreatable() {}
 
 func (ContactCard) Requires() []jmap.URI { return []jmap.URI{contacts.URI} }
 

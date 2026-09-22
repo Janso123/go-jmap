@@ -1,7 +1,7 @@
 package mdn_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -22,7 +22,7 @@ func TestMDNSendRequiresMailAndMDN(t *testing.T) {
 func TestMDNSendResponseRegistered(t *testing.T) {
 	raw := []byte(`{"sessionState":"s1","methodResponses":[["MDN/send",{"accountId":"u1","sent":{},"notSent":{}},"0"]]}`)
 	var resp jmap.Response
-	require.NoError(t, json.Unmarshal(raw, &resp))
+	require.NoError(t, jsonv2.Unmarshal(raw, &resp))
 	require.Len(t, resp.Responses, 1)
 	_, ok := resp.Responses[0].Args.(*mdn.SendResponse)
 	require.True(t, ok)

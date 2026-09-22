@@ -18,7 +18,7 @@ func init() {
 type Capability struct {
 	// The maximum number of seconds the server supports for delayed
 	// sending. A value of 0 indicates delayed sending is not supported
-	MaxDelayedSend uint64 `json:"maxDelayedSend,omitzero"`
+	MaxDelayedSend jmap.UnsignedInt `json:"maxDelayedSend"`
 
 	// The set of SMTP submission extensions supported by the server, which
 	// the client may use when creating an EmailSubmission object (see
@@ -42,13 +42,13 @@ type EmailSubmission struct {
 
 	ThreadID jmap.ID `json:"threadId,omitzero"`
 
-	Envelope *Envelope `json:"envelope,omitzero"`
+	Envelope jmap.Optional[Envelope] `json:"envelope,omitzero"`
 
-	SendAt *jmap.UTCDate `json:"sendAt,omitzero"`
+	SendAt jmap.Optional[jmap.UTCDate] `json:"sendAt,omitzero"`
 
 	UndoStatus UndoStatus `json:"undoStatus,omitzero"`
 
-	DeliveryStatus map[string]*DeliveryStatus `json:"deliveryStatus,omitzero"`
+	DeliveryStatus jmap.Optional[map[string]*DeliveryStatus] `json:"deliveryStatus,omitzero"`
 
 	DSNBlobIDs []jmap.ID `json:"dsnBlobIds,omitzero"`
 
@@ -56,6 +56,8 @@ type EmailSubmission struct {
 }
 
 func (EmailSubmission) JMAPType() string { return "EmailSubmission" }
+
+func (EmailSubmission) JMAPCreatable() {}
 
 func (EmailSubmission) Requires() []jmap.URI {
 	return []jmap.URI{URI}
@@ -84,7 +86,7 @@ type Address struct {
 
 	// Parameters to send with the email submission, if any SMTP extensions
 	// are used. A nil value means the parameter is present with no value.
-	Parameters map[string]*string `json:"parameters,omitzero"`
+	Parameters jmap.Optional[map[string]*string] `json:"parameters,omitzero"`
 }
 
 // Delivered is the delivery outcome for a recipient.

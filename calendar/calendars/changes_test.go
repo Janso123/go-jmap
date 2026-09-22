@@ -1,7 +1,7 @@
 package calendars
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -16,11 +16,11 @@ func TestChangesInvoke(t *testing.T) {
 	id := req.Invoke(&Changes{
 		Account:    "u1",
 		SinceState: "s1",
-		MaxChanges: 50,
+		MaxChanges: jmap.Uint64Ptr(50),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["Calendar/changes",{"accountId":"u1","sinceState":"s1","maxChanges":50},"0"]]}`,

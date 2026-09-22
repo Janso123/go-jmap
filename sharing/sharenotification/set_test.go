@@ -1,7 +1,7 @@
 package sharenotification
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -19,7 +19,7 @@ func TestSetDestroyOnly(t *testing.T) {
 	id := req.Invoke(m)
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	assert.NoError(t, err)
 	expected := `{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["ShareNotification/set",{"accountId":"account-id","destroy":["notification-id"]},"0"]]}`
 	assert.Equal(t, expected, string(data))
@@ -40,7 +40,7 @@ func TestSetDestroyOnly(t *testing.T) {
 			},
 		}
 
-		data, err := json.Marshal(req)
+		data, err := jsonv2.Marshal(req)
 		assert.NoError(t, err)
 		expected := `{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["ShareNotification/set",{"accountId":"account-id","destroy":["notification-id"]},"manual"]]}`
 		assert.Equal(t, expected, string(data))

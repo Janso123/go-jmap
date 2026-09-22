@@ -1,7 +1,7 @@
 package blob_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -41,20 +41,30 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 	}`
 
 	var session jmap.Session
-	require.NoError(t, json.Unmarshal([]byte(raw), &session))
+	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &session))
 
 	sessionCap, ok := session.Capabilities[blob.URI].(*blob.AccountCapability)
 	require.True(t, ok)
-	assert.Nil(t, sessionCap.MaxSizeBlobSet)
+	assert.True(t, sessionCap.MaxSizeBlobSet.IsZero())
 	assert.Zero(t, sessionCap.MaxDataSources)
 	assert.Nil(t, sessionCap.SupportedTypeNames)
 	assert.Nil(t, sessionCap.SupportedDigestAlgorithms)
 
 	accountCap, ok := session.Accounts["u1"].Capabilities[blob.URI].(*blob.AccountCapability)
 	require.True(t, ok)
-	require.NotNil(t, accountCap.MaxSizeBlobSet)
-	assert.Equal(t, uint64(1024), *accountCap.MaxSizeBlobSet)
-	assert.Equal(t, uint64(3), accountCap.MaxDataSources)
+	maxSize, okMax := accountCap.MaxSizeBlobSet.Value()
+	require.True(t, okMax)
+	assert.Equal(t, jmap.UnsignedInt(1024), maxSize)
+	assert.Equal(t, jmap.UnsignedInt(3), accountCap.MaxDataSources)
 	assert.Equal(t, []string{"image/png", "application/pdf"}, accountCap.SupportedTypeNames)
 	assert.Equal(t, []string{"sha", "sha-256"}, accountCap.SupportedDigestAlgorithms)
+}
+
+func TestAccountCapabilityNullMaxSizeBlobSet(t *testing.T) {
+	t.Parallel()
+	var cap blob.AccountCapability
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"maxSizeBlobSet":null}`), &cap))
+	b, err := jsonv2.Marshal(&cap)
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"maxSizeBlobSet":null`)
 }

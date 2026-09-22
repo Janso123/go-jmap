@@ -1,6 +1,9 @@
 package calendarevent
 
 import (
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/calendar"
 )
@@ -12,24 +15,7 @@ type Changes struct {
 }
 
 // ChangesResponse is the result of CalendarEvent/changes.
-// updatedProperties is CalendarEvent-specific.
-type ChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitzero"`
-
-	OldState string `json:"oldState,omitzero"`
-
-	NewState string `json:"newState,omitzero"`
-
-	HasMoreChanges bool `json:"hasMoreChanges,omitzero"`
-
-	Created []jmap.ID `json:"created,omitzero"`
-
-	Updated []jmap.ID `json:"updated,omitzero"`
-
-	Destroyed []jmap.ID `json:"destroyed,omitzero"`
-
-	UpdatedProperties []string `json:"updatedProperties,omitzero"`
-}
+type ChangesResponse = jmap.ChangesResponse
 
 // Set creates, updates, and destroys calendar events.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5.9
@@ -61,6 +47,25 @@ type QueryChanges struct {
 	Sort []*jmap.Comparator `json:"sort,omitzero"`
 }
 
+type queryChangesAlias QueryChanges
+
+func (q *QueryChanges) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	var s struct {
+		queryChangesAlias
+		Filter jsontext.Value `json:"filter"`
+	}
+	if err := jsonv2.UnmarshalDecode(dec, &s); err != nil {
+		return err
+	}
+	f, err := jmap.UnmarshalFilter[FilterCondition](s.Filter)
+	if err != nil {
+		return err
+	}
+	*q = QueryChanges(s.queryChangesAlias)
+	q.Filter = f
+	return nil
+}
+
 // QueryChangesResponse is the result of CalendarEvent/queryChanges.
 type QueryChangesResponse = jmap.QueryChangesResponse
 
@@ -81,11 +86,11 @@ func (m *Parse) Requires() []jmap.URI { return []jmap.URI{calendar.ParseURI} }
 type ParseResponse struct {
 	Account jmap.ID `json:"accountId,omitzero"`
 
-	Parsed map[jmap.ID][]*CalendarEvent `json:"parsed,omitzero"`
+	Parsed jmap.Optional[map[jmap.ID][]*CalendarEvent] `json:"parsed,omitzero"`
 
-	NotParsable []jmap.ID `json:"notParsable,omitzero"`
+	NotParsable jmap.Optional[[]jmap.ID] `json:"notParsable,omitzero"`
 
-	NotFound []jmap.ID `json:"notFound,omitzero"`
+	NotFound jmap.Optional[[]jmap.ID] `json:"notFound,omitzero"`
 }
 
 func newParseResponse() jmap.MethodResponse { return &ParseResponse{} }

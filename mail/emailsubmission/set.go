@@ -10,13 +10,15 @@ import (
 type Set struct {
 	jmap.Set[EmailSubmission]
 
-	OnSuccessUpdateEmail map[jmap.ID]jmap.Patch `json:"onSuccessUpdateEmail,omitzero"`
+	OnSuccessUpdateEmail jmap.Optional[map[jmap.ID]jmap.Patch] `json:"onSuccessUpdateEmail,omitzero"`
 
-	OnSuccessDestroyEmail []jmap.ID `json:"onSuccessDestroyEmail,omitzero"`
+	OnSuccessDestroyEmail jmap.Optional[[]jmap.ID] `json:"onSuccessDestroyEmail,omitzero"`
 }
 
 func (s *Set) Requires() []jmap.URI {
-	if len(s.OnSuccessUpdateEmail) > 0 || len(s.OnSuccessDestroyEmail) > 0 {
+	update, _ := s.OnSuccessUpdateEmail.Value()
+	destroy, _ := s.OnSuccessDestroyEmail.Value()
+	if len(update) > 0 || len(destroy) > 0 {
 		return []jmap.URI{URI, mail.URI}
 	}
 	return []jmap.URI{URI}

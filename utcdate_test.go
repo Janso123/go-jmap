@@ -10,6 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestUTCDateRejectsOffsetAndLowercase(t *testing.T) {
+	var d jmap.UTCDate
+	require.Error(t, jsonv2.Unmarshal([]byte(`"2026-09-21T00:00:00+02:00"`), &d))
+	require.Error(t, jsonv2.Unmarshal([]byte(`"2026-09-21t00:00:00z"`), &d))
+	require.NoError(t, jsonv2.Unmarshal([]byte(`"2026-09-21T00:00:00Z"`), &d))
+}
+
 func TestUTCDateAlwaysZ(t *testing.T) {
 	loc := time.FixedZone("CEST", 2*3600)
 	d := jmap.UTCDate(time.Date(2026, 9, 21, 1, 0, 0, 0, loc))

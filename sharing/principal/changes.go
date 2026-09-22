@@ -9,21 +9,5 @@ type Changes struct {
 }
 
 // ChangesResponse is the result of Principal/changes.
-// updatedProperties is Principal-specific (not on the kit ChangesResponse).
-type ChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitzero"`
-
-	OldState string `json:"oldState,omitzero"`
-
-	NewState string `json:"newState,omitzero"`
-
-	HasMoreChanges bool `json:"hasMoreChanges,omitzero"`
-
-	Created []jmap.ID `json:"created,omitzero"`
-
-	Updated []jmap.ID `json:"updated,omitzero"`
-
-	Destroyed []jmap.ID `json:"destroyed,omitzero"`
-
-	UpdatedProperties []string `json:"updatedProperties,omitzero"`
-}
+// RFC 9670 §2.2 is a standard /changes method.
+type ChangesResponse = jmap.ChangesResponse

@@ -1,7 +1,7 @@
 package blob_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -20,7 +20,7 @@ func TestLookupInvoke(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:blob"],"methodCalls":[["Blob/lookup",{"accountId":"u1","typeNames":["Mailbox","Thread","Email"],"ids":["blob1","missing"]},"0"]]}`,
@@ -31,7 +31,7 @@ func TestLookupResponseUnmarshal(t *testing.T) {
 	raw := []byte(`{"sessionState":"s1","methodResponses":[["Blob/lookup",{"accountId":"u1","list":[{"id":"blob1","matchedIds":{"Mailbox":["m1"],"Thread":["t1"],"Email":["e1","e2"]}}],"notFound":["missing"]},"0"]]}`)
 
 	var resp jmap.Response
-	require.NoError(t, json.Unmarshal(raw, &resp))
+	require.NoError(t, jsonv2.Unmarshal(raw, &resp))
 	require.Len(t, resp.Responses, 1)
 
 	inv := resp.Responses[0]

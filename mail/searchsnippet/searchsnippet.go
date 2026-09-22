@@ -11,7 +11,7 @@ func init() {
 type SearchSnippet struct {
 	Email jmap.ID `json:"emailId,omitzero"`
 
-	Subject *string `json:"subject,omitzero"`
+	Subject jmap.Optional[string] `json:"subject,omitzero"`
 
-	Preview *string `json:"preview,omitzero"`
+	Preview jmap.Optional[string] `json:"preview,omitzero"`
 }

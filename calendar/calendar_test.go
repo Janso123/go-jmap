@@ -1,7 +1,7 @@
 package calendar_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -49,15 +49,15 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 	}`
 
 	var session jmap.Session
-	require.NoError(t, json.Unmarshal([]byte(raw), &session))
+	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &session))
 
 	sessionCalendars, ok := session.Capabilities[calendar.URI].(*calendar.Capability)
 	require.True(t, ok)
-	assert.Nil(t, sessionCalendars.MaxCalendarsPerEvent)
+	assert.True(t, sessionCalendars.MaxCalendarsPerEvent.IsZero())
 	assert.Empty(t, sessionCalendars.MinDateTime)
 	assert.Empty(t, sessionCalendars.MaxDateTime)
 	assert.Empty(t, sessionCalendars.MaxExpandedQueryDuration)
-	assert.Nil(t, sessionCalendars.MaxParticipantsPerEvent)
+	assert.True(t, sessionCalendars.MaxParticipantsPerEvent.IsZero())
 	assert.Nil(t, sessionCalendars.MayCreateCalendar)
 
 	_, ok = session.Capabilities[calendar.ParseURI].(*calendar.ParseCapability)
@@ -69,13 +69,15 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 
 	accountCalendars, ok := session.Accounts["u1"].Capabilities[calendar.URI].(*calendar.Capability)
 	require.True(t, ok)
-	require.NotNil(t, accountCalendars.MaxCalendarsPerEvent)
-	assert.Equal(t, uint64(7), *accountCalendars.MaxCalendarsPerEvent)
+	maxCalendars, ok := accountCalendars.MaxCalendarsPerEvent.Value()
+	require.True(t, ok)
+	assert.Equal(t, jmap.UnsignedInt(7), maxCalendars)
 	assert.Equal(t, jscalendar.UTCDateTime("1900-01-01T00:00:00Z"), accountCalendars.MinDateTime)
 	assert.Equal(t, jscalendar.UTCDateTime("2200-01-01T00:00:00Z"), accountCalendars.MaxDateTime)
 	assert.Equal(t, jscalendar.Duration("P365D"), accountCalendars.MaxExpandedQueryDuration)
-	require.NotNil(t, accountCalendars.MaxParticipantsPerEvent)
-	assert.Equal(t, uint64(250), *accountCalendars.MaxParticipantsPerEvent)
+	maxParticipants, ok := accountCalendars.MaxParticipantsPerEvent.Value()
+	require.True(t, ok)
+	assert.Equal(t, jmap.UnsignedInt(250), maxParticipants)
 	require.NotNil(t, accountCalendars.MayCreateCalendar)
 	assert.True(t, *accountCalendars.MayCreateCalendar)
 

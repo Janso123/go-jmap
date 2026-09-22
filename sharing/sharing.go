@@ -9,18 +9,21 @@ const URI jmap.URI = "urn:ietf:params:jmap:principals"
 const OwnerURI jmap.URI = "urn:ietf:params:jmap:principals:owner"
 
 func init() {
-	jmap.RegisterCapability(&Capability{})
+	jmap.RegisterCapability(&AccountCapability{})
 	jmap.RegisterCapability(&OwnerCapability{})
 }
 
-// Capability describes the principals session capability.
-type Capability struct {
-	CurrentUserPrincipalID *jmap.ID `json:"currentUserPrincipalId,omitzero"`
+// AccountCapability is the urn:ietf:params:jmap:principals capability object.
+// currentUserPrincipalId is Id|null on an account's accountCapabilities
+// object (RFC 9670 §1.5.1). The session object for this URI is empty;
+// the registry has one type per URI, so this type decodes both.
+type AccountCapability struct {
+	CurrentUserPrincipalID jmap.Optional[jmap.ID] `json:"currentUserPrincipalId,omitzero"`
 }
 
-func (c *Capability) URI() jmap.URI { return URI }
+func (c *AccountCapability) URI() jmap.URI { return URI }
 
-func (c *Capability) New() jmap.Capability { return &Capability{} }
+func (c *AccountCapability) New() jmap.Capability { return &AccountCapability{} }
 
 // OwnerCapability describes the principals owner account capability.
 type OwnerCapability struct {

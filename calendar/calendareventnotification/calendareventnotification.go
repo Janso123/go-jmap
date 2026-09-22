@@ -14,8 +14,6 @@ func init() {
 			jmap.MethodQueryChanges |
 			jmap.MethodSet,
 	)
-	// CalendarEventNotification/changes includes updatedProperties; override kit factory.
-	jmap.RegisterMethod("CalendarEventNotification/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 const (
@@ -36,11 +34,11 @@ const (
 type Person struct {
 	Name string `json:"name,omitzero"`
 
-	Email *string `json:"email,omitzero"`
+	Email jmap.Optional[string] `json:"email,omitzero"`
 
-	PrincipalID *jmap.ID `json:"principalId,omitzero"`
+	PrincipalID jmap.Optional[jmap.ID] `json:"principalId,omitzero"`
 
-	CalendarAddress *string `json:"calendarAddress,omitzero"`
+	CalendarAddress jmap.Optional[string] `json:"calendarAddress,omitzero"`
 }
 
 // CalendarEventNotification tracks server-created event change notifications.
@@ -52,7 +50,7 @@ type CalendarEventNotification struct {
 
 	ChangedBy *Person `json:"changedBy,omitzero"`
 
-	Comment *string `json:"comment,omitzero"`
+	Comment jmap.Optional[string] `json:"comment,omitzero"`
 
 	Type Type `json:"type,omitzero"`
 

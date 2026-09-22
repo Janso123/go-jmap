@@ -38,6 +38,9 @@ func marshalRequest(id string, req *jmap.Request) ([]byte, error) {
 		Calls      []*jmap.Invocation  `json:"methodCalls"`
 		CreatedIDs map[jmap.ID]jmap.ID `json:"createdIds,omitzero"`
 	}
+	if err := req.ValidateArgs(); err != nil {
+		return nil, err
+	}
 	return jsonv2.Marshal(wsReq{
 		Type:       "Request",
 		ID:         id,

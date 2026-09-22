@@ -27,10 +27,17 @@ func TestEmailSMIMEFieldsUnmarshal(t *testing.T) {
 	}`
 	var e email.Email
 	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &e))
-	require.Equal(t, "good", e.SMIMEStatus)
-	require.Equal(t, "unknown", e.SMIMEStatusAtDelivery)
-	require.Equal(t, []string{"expired"}, e.SMIMEErrors)
-	require.NotNil(t, e.SMIMEVerifiedAt)
-	require.True(t, time.Time(*e.SMIMEVerifiedAt).UTC().Equal(
+	status, ok := e.SMIMEStatus.Value()
+	require.True(t, ok)
+	require.Equal(t, "good", status)
+	atDelivery, ok := e.SMIMEStatusAtDelivery.Value()
+	require.True(t, ok)
+	require.Equal(t, "unknown", atDelivery)
+	errs, ok := e.SMIMEErrors.Value()
+	require.True(t, ok)
+	require.Equal(t, []string{"expired"}, errs)
+	verified, ok := e.SMIMEVerifiedAt.Value()
+	require.True(t, ok)
+	require.True(t, time.Time(verified).UTC().Equal(
 		time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC)))
 }

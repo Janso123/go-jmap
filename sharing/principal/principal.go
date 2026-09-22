@@ -1,6 +1,8 @@
 package principal
 
 import (
+	"encoding/json/jsontext"
+
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/sharing"
 )
@@ -13,8 +15,6 @@ func init() {
 			jmap.MethodQueryChanges |
 			jmap.MethodSet,
 	)
-	// Principal/changes includes updatedProperties; override kit factory.
-	jmap.RegisterMethod("Principal/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 	// Manual method (not part of the standard kit).
 	jmap.RegisterMethod("Principal/getAvailability", newGetAvailabilityResponse)
 }
@@ -48,17 +48,19 @@ type Principal struct {
 
 	Name string `json:"name,omitzero"`
 
-	Description string `json:"description,omitzero"`
+	Description jmap.Optional[string] `json:"description,omitzero"`
 
-	Email string `json:"email,omitzero"`
+	Email jmap.Optional[string] `json:"email,omitzero"`
 
-	TimeZone string `json:"timeZone,omitzero"`
+	TimeZone jmap.Optional[string] `json:"timeZone,omitzero"`
 
-	Capabilities map[jmap.URI]jmap.Patch `json:"capabilities,omitzero"`
+	Capabilities map[jmap.URI]jsontext.Value `json:"capabilities,omitzero"`
 
-	Accounts map[jmap.ID]jmap.Account `json:"accounts,omitzero"`
+	Accounts jmap.Optional[map[jmap.ID]jmap.Account] `json:"accounts,omitzero"`
 }
 
 func (Principal) JMAPType() string { return "Principal" }
+
+func (Principal) JMAPCreatable() {}
 
 func (Principal) Requires() []jmap.URI { return []jmap.URI{sharing.URI} }

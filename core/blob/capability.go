@@ -12,8 +12,12 @@ func init() {
 // AccountCapability describes blob management limits advertised by an account.
 // The same type is also used for the empty session capability object.
 type AccountCapability struct {
-	MaxSizeBlobSet            *uint64  `json:"maxSizeBlobSet,omitzero"`
-	MaxDataSources            uint64   `json:"maxDataSources,omitzero"`
+	// MaxSizeBlobSet is UnsignedInt|null. Null means there is no limit.
+	MaxSizeBlobSet jmap.Optional[jmap.UnsignedInt] `json:"maxSizeBlobSet,omitzero"`
+
+	// MaxDataSources is a required read-only UnsignedInt. Zero stays on the wire.
+	MaxDataSources jmap.UnsignedInt `json:"maxDataSources"`
+
 	SupportedTypeNames        []string `json:"supportedTypeNames,omitzero"`
 	SupportedDigestAlgorithms []string `json:"supportedDigestAlgorithms,omitzero"`
 }

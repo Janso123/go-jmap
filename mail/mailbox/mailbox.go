@@ -25,20 +25,22 @@ type Mailbox struct {
 
 	Name string `json:"name,omitzero"`
 
-	// ParentID has no omit: nil marshals as JSON null (top-level mailbox).
-	ParentID *jmap.ID `json:"parentId"`
+	// ParentID is JSON null for a top-level mailbox and omitted when unset.
+	ParentID jmap.Optional[jmap.ID] `json:"parentId,omitzero"`
 
-	Role Role `json:"role,omitzero"`
+	// Role is JSON null for a mailbox with no special-use role.
+	Role jmap.Optional[Role] `json:"role,omitzero"`
 
-	SortOrder uint64 `json:"sortOrder,omitzero"`
+	// SortOrder is server-set: nil omits it so a create does not send 0.
+	SortOrder *jmap.UnsignedInt `json:"sortOrder,omitzero"`
 
-	TotalEmails uint64 `json:"totalEmails,omitzero"`
+	TotalEmails *jmap.UnsignedInt `json:"totalEmails,omitzero"`
 
-	UnreadEmails uint64 `json:"unreadEmails,omitzero"`
+	UnreadEmails *jmap.UnsignedInt `json:"unreadEmails,omitzero"`
 
-	TotalThreads uint64 `json:"totalThreads,omitzero"`
+	TotalThreads *jmap.UnsignedInt `json:"totalThreads,omitzero"`
 
-	UnreadThreads uint64 `json:"unreadThreads,omitzero"`
+	UnreadThreads *jmap.UnsignedInt `json:"unreadThreads,omitzero"`
 
 	Rights *Rights `json:"myRights,omitzero"`
 
@@ -47,27 +49,32 @@ type Mailbox struct {
 
 func (Mailbox) JMAPType() string { return "Mailbox" }
 
+func (Mailbox) JMAPCreatable() {}
+
 func (Mailbox) Requires() []jmap.URI { return []jmap.URI{mail.URI} }
 
 // Access Control Lists (ACLs)
+//
+// Every right is a mandatory Boolean; false must stay on the wire. The whole
+// object sits behind *Rights,omitzero, so a create omits it entirely.
 type Rights struct {
-	MayReadItems bool `json:"mayReadItems,omitzero"`
+	MayReadItems bool `json:"mayReadItems"`
 
-	MayAddItems bool `json:"mayAddItems,omitzero"`
+	MayAddItems bool `json:"mayAddItems"`
 
-	MayRemoveItems bool `json:"mayRemoveItems,omitzero"`
+	MayRemoveItems bool `json:"mayRemoveItems"`
 
-	MaySetSeen bool `json:"maySetSeen,omitzero"`
+	MaySetSeen bool `json:"maySetSeen"`
 
-	MaySetKeywords bool `json:"maySetKeywords,omitzero"`
+	MaySetKeywords bool `json:"maySetKeywords"`
 
-	MayCreateChild bool `json:"mayCreateChild,omitzero"`
+	MayCreateChild bool `json:"mayCreateChild"`
 
-	MayRename bool `json:"mayRename,omitzero"`
+	MayRename bool `json:"mayRename"`
 
-	MayDelete bool `json:"mayDelete,omitzero"`
+	MayDelete bool `json:"mayDelete"`
 
-	MaySubmit bool `json:"maySubmit,omitzero"`
+	MaySubmit bool `json:"maySubmit"`
 }
 
 // Identifies Mailboxes that have a particular common purpose (e.g., the

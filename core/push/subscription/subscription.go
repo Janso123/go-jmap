@@ -17,16 +17,20 @@ type PushSubscription struct {
 
 	URL string `json:"url,omitzero"`
 
-	Keys *Key `json:"keys,omitzero"`
+	Keys jmap.Optional[Key] `json:"keys,omitzero"`
 
-	VerificationCode string `json:"verificationCode,omitzero"`
+	VerificationCode jmap.Optional[string] `json:"verificationCode,omitzero"`
 
-	Expires *jmap.UTCDate `json:"expires,omitzero"`
+	Expires jmap.Optional[jmap.UTCDate] `json:"expires,omitzero"`
 
-	Types []string `json:"types,omitzero"`
+	// Types is String[]|null (RFC 8620 §7.2). A zero value omits the key.
+	// Null means all types; an empty slice means none.
+	Types jmap.Optional[[]string] `json:"types,omitzero"`
 }
 
 func (PushSubscription) JMAPType() string { return "PushSubscription" }
+
+func (PushSubscription) JMAPCreatable() {}
 
 func (PushSubscription) Requires() []jmap.URI { return nil }
 

@@ -1,9 +1,10 @@
 package jscalendar
 
 import (
-	"encoding/json"
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
+
+	"github.com/Janso123/go-jmap"
 )
 
 type UTCDateTime string
@@ -15,10 +16,8 @@ type TimeZoneID string
 type FreeBusyStatus string
 
 const (
-	FreeBusyFree            FreeBusyStatus = "free"
-	FreeBusyBusy            FreeBusyStatus = "busy"
-	FreeBusyBusyUnavailable FreeBusyStatus = "busy-unavailable"
-	FreeBusyBusyTentative   FreeBusyStatus = "busy-tentative"
+	FreeBusyFree FreeBusyStatus = "free"
+	FreeBusyBusy FreeBusyStatus = "busy"
 )
 
 type Privacy string
@@ -56,10 +55,10 @@ type Event struct {
 	Categories             map[string]bool             `json:"categories,omitzero"`
 	Color                  string                      `json:"color,omitzero"`
 
-	RecurrenceID         LocalDateTime          `json:"recurrenceId,omitzero"`
-	RecurrenceIDTimeZone TimeZoneID             `json:"recurrenceIdTimeZone,omitzero"`
-	RecurrenceRule       *RecurrenceRule        `json:"recurrenceRule,omitzero"`
-	RecurrenceOverrides  map[string]PatchObject `json:"recurrenceOverrides,omitzero"`
+	RecurrenceID         LocalDateTime                         `json:"recurrenceId,omitzero"`
+	RecurrenceIDTimeZone TimeZoneID                            `json:"recurrenceIdTimeZone,omitzero"`
+	RecurrenceRule       jmap.Optional[RecurrenceRule]         `json:"recurrenceRule,omitzero"`
+	RecurrenceOverrides  jmap.Optional[map[string]PatchObject] `json:"recurrenceOverrides,omitzero"`
 
 	OrganizerCalendarAddress string                  `json:"organizerCalendarAddress,omitzero"`
 	SentBy                   string                  `json:"sentBy,omitzero"`
@@ -86,14 +85,14 @@ type Relation struct {
 }
 
 type Link struct {
-	Type        string          `json:"@type,omitzero"`
-	Href        string          `json:"href,omitzero"`
-	ContentType string          `json:"contentType,omitzero"`
-	Size        uint64          `json:"size,omitzero"`
-	Rel         string          `json:"rel,omitzero"`
-	Title       string          `json:"title,omitzero"`
-	CID         string          `json:"cid,omitzero"`
-	Display     map[string]bool `json:"display,omitzero"`
+	Type        string            `json:"@type,omitzero"`
+	Href        string            `json:"href,omitzero"`
+	ContentType string            `json:"contentType,omitzero"`
+	Size        *jmap.UnsignedInt `json:"size,omitzero"`
+	Rel         string            `json:"rel,omitzero"`
+	Title       string            `json:"title,omitzero"`
+	Display     map[string]bool   `json:"display,omitzero"`
+	BlobID      jmap.ID           `json:"blobId,omitzero"`
 
 	Extra map[string]jsontext.Value `json:",embed"`
 }
@@ -148,23 +147,25 @@ type RecurrenceRule struct {
 }
 
 type Participant struct {
-	Type                   string           `json:"@type,omitzero"`
-	Name                   string           `json:"name,omitzero"`
-	Email                  string           `json:"email,omitzero"`
-	Description            string           `json:"description,omitzero"`
-	DescriptionContentType string           `json:"descriptionContentType,omitzero"`
-	CalendarAddress        string           `json:"calendarAddress,omitzero"`
-	Kind                   string           `json:"kind,omitzero"`
-	Roles                  map[string]bool  `json:"roles,omitzero"`
-	ParticipationStatus    string           `json:"participationStatus,omitzero"`
-	ExpectReply            bool             `json:"expectReply,omitzero"`
-	SentBy                 string           `json:"sentBy,omitzero"`
-	DelegatedTo            map[string]bool  `json:"delegatedTo,omitzero"`
-	DelegatedFrom          map[string]bool  `json:"delegatedFrom,omitzero"`
-	MemberOf               map[string]bool  `json:"memberOf,omitzero"`
-	Links                  map[string]*Link `json:"links,omitzero"`
-	Progress               string           `json:"progress,omitzero"`
-	PercentComplete        uint64           `json:"percentComplete,omitzero"`
+	Type                   string            `json:"@type,omitzero"`
+	Name                   string            `json:"name,omitzero"`
+	Email                  string            `json:"email,omitzero"`
+	Description            string            `json:"description,omitzero"`
+	DescriptionContentType string            `json:"descriptionContentType,omitzero"`
+	CalendarAddress        string            `json:"calendarAddress,omitzero"`
+	Kind                   string            `json:"kind,omitzero"`
+	Roles                  map[string]bool   `json:"roles,omitzero"`
+	ParticipationStatus    string            `json:"participationStatus,omitzero"`
+	ExpectReply            bool              `json:"expectReply,omitzero"`
+	SentBy                 string            `json:"sentBy,omitzero"`
+	DelegatedTo            map[string]bool   `json:"delegatedTo,omitzero"`
+	DelegatedFrom          map[string]bool   `json:"delegatedFrom,omitzero"`
+	MemberOf               map[string]bool   `json:"memberOf,omitzero"`
+	Links                  map[string]*Link  `json:"links,omitzero"`
+	Progress               string            `json:"progress,omitzero"`
+	PercentComplete        *jmap.UnsignedInt `json:"percentComplete,omitzero"`
+	ScheduleSequence       jmap.UnsignedInt  `json:"scheduleSequence,omitzero"`
+	ScheduleUpdated        UTCDateTime       `json:"scheduleUpdated,omitzero"`
 
 	Extra map[string]jsontext.Value `json:",embed"`
 }
@@ -182,13 +183,13 @@ type Alert struct {
 type Trigger struct {
 	OffsetTrigger   *OffsetTrigger
 	AbsoluteTrigger *AbsoluteTrigger
-	Unknown         json.RawMessage
+	Unknown         jsontext.Value
 }
 
 func (t Trigger) MarshalJSON() ([]byte, error) {
 	switch {
 	case len(t.Unknown) > 0:
-		return t.Unknown, nil
+		return []byte(t.Unknown), nil
 	case t.AbsoluteTrigger != nil:
 		return jsonv2.Marshal(t.AbsoluteTrigger)
 	case t.OffsetTrigger != nil:

@@ -1,7 +1,7 @@
 package mailbox
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -17,8 +17,8 @@ func TestSort(t *testing.T) {
 			},
 		},
 	}
-	data, err := json.Marshal(query)
+	data, err := jsonv2.Marshal(query)
 	assert.NoError(err)
-	expected := `{"sort":[{"property":"name","isAscending":false}]}`
+	expected := `{"sort":[{"property":"name"}]}`
 	assert.Equal(expected, string(data))
 }

@@ -15,13 +15,13 @@ func TestEmailGetRequiresSMIMEWhenPropertiesAsk(t *testing.T) {
 	t.Parallel()
 	require.Equal(t, []jmap.URI{mail.URI}, (&email.Get{}).Requires())
 	g := &email.Get{}
-	g.Properties = []string{email.PropSubject, email.PropSMIMEStatus}
+	g.Properties = jmap.Some([]string{email.PropSubject, email.PropSMIMEStatus})
 	require.Equal(t, []jmap.URI{mail.URI, email.SMIMEVerify}, g.Requires())
 }
 
 func TestEmailQueryRequiresSMIMEWhenFilterSet(t *testing.T) {
 	t.Parallel()
-	q := &email.Query{Filter: &email.FilterCondition{HasSMIME: jmap.Bool(false)}}
+	q := &email.Query{Filter: &email.FilterCondition{HasSMIME: new(false)}}
 	require.Equal(t, []jmap.URI{mail.URI, email.SMIMEVerify}, q.Requires())
 }
 

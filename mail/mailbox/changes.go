@@ -17,13 +17,15 @@ type ChangesResponse struct {
 
 	NewState string `json:"newState,omitzero"`
 
-	HasMoreChanges bool `json:"hasMoreChanges,omitzero"`
+	HasMoreChanges bool `json:"hasMoreChanges"`
 
-	Created []jmap.ID `json:"created,omitzero"`
+	Created []jmap.ID `json:"created"`
 
-	Updated []jmap.ID `json:"updated,omitzero"`
+	Updated []jmap.ID `json:"updated"`
 
-	Destroyed []jmap.ID `json:"destroyed,omitzero"`
+	Destroyed []jmap.ID `json:"destroyed"`
 
-	UpdatedProperties []string `json:"updatedProperties,omitzero"`
+	// UpdatedProperties is JSON null when the server cannot say which
+	// properties changed (RFC 8621 §2.2).
+	UpdatedProperties jmap.Optional[[]string] `json:"updatedProperties,omitzero"`
 }

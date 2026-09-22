@@ -13,9 +13,9 @@ type FilterCondition struct {
 
 	After *jmap.UTCDate `json:"after,omitzero"`
 
-	MinSize uint64 `json:"minSize,omitzero"`
+	MinSize *jmap.UnsignedInt `json:"minSize,omitzero"`
 
-	MaxSize uint64 `json:"maxSize,omitzero"`
+	MaxSize *jmap.UnsignedInt `json:"maxSize,omitzero"`
 
 	AllInThreadHaveKeyword string `json:"allInThreadHaveKeyword,omitzero"`
 
@@ -82,9 +82,9 @@ func Before(d jmap.UTCDate) *FilterCondition { return &FilterCondition{Before: &
 func After(d jmap.UTCDate) *FilterCondition  { return &FilterCondition{After: &d} }
 
 func WithAttachment() *FilterCondition {
-	return &FilterCondition{HasAttachment: jmap.Bool(true)}
+	return &FilterCondition{HasAttachment: new(true)}
 }
 
 func WithoutAttachment() *FilterCondition {
-	return &FilterCondition{HasAttachment: jmap.Bool(false)}
+	return &FilterCondition{HasAttachment: new(false)}
 }

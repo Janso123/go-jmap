@@ -1,7 +1,7 @@
 package identity_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -23,7 +23,7 @@ func TestIdentityGetRequiresEmailSubmission(t *testing.T) {
 func TestIdentityGetResponseRegistered(t *testing.T) {
 	raw := []byte(`{"sessionState":"s1","methodResponses":[["Identity/get",{"accountId":"u1","state":"s0","list":[],"notFound":[]},"0"]]}`)
 	var resp jmap.Response
-	require.NoError(t, json.Unmarshal(raw, &resp))
+	require.NoError(t, jsonv2.Unmarshal(raw, &resp))
 	require.Len(t, resp.Responses, 1)
 	_, ok := resp.Responses[0].Args.(*identity.GetResponse)
 	require.True(t, ok)

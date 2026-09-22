@@ -1,7 +1,7 @@
 package vapid_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -27,7 +27,7 @@ func TestCapabilityUnmarshalFromSession(t *testing.T) {
 		"state": "s1"
 	}`)
 	var sess jmap.Session
-	require.NoError(t, json.Unmarshal(raw, &sess))
+	require.NoError(t, jsonv2.Unmarshal(raw, &sess))
 	c, ok := sess.Capabilities[vapid.URI].(*vapid.Capability)
 	require.True(t, ok)
 	assert.Equal(t, "BASE64URLKEY", c.ApplicationServerKey)

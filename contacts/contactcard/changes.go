@@ -9,21 +9,4 @@ type Changes struct {
 }
 
 // ChangesResponse is the result of ContactCard/changes.
-// updatedProperties is ContactCard-specific.
-type ChangesResponse struct {
-	Account jmap.ID `json:"accountId,omitzero"`
-
-	OldState string `json:"oldState,omitzero"`
-
-	NewState string `json:"newState,omitzero"`
-
-	HasMoreChanges bool `json:"hasMoreChanges,omitzero"`
-
-	Created []jmap.ID `json:"created,omitzero"`
-
-	Updated []jmap.ID `json:"updated,omitzero"`
-
-	Destroyed []jmap.ID `json:"destroyed,omitzero"`
-
-	UpdatedProperties []string `json:"updatedProperties,omitzero"`
-}
+type ChangesResponse = jmap.ChangesResponse

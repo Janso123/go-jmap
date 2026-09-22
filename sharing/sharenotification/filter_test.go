@@ -1,7 +1,7 @@
 package sharenotification
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 	"time"
 
@@ -14,9 +14,9 @@ func TestFilterConditionMarshal(t *testing.T) {
 	after := jmap.UTCDate(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
 	before := jmap.UTCDate(time.Date(2026, time.October, 1, 0, 0, 0, 0, time.UTC))
 
-	data, err := json.Marshal(&FilterCondition{
-		After:           &after,
-		Before:          &before,
+	data, err := jsonv2.Marshal(&FilterCondition{
+		After:           jmap.Some(after),
+		Before:          jmap.Some(before),
 		ObjectType:      "Mailbox",
 		ObjectAccountID: "a1",
 	})
@@ -27,7 +27,7 @@ func TestFilterConditionMarshal(t *testing.T) {
 }
 
 func TestFilterOperatorMarshal(t *testing.T) {
-	data, err := json.Marshal(And(
+	data, err := jsonv2.Marshal(And(
 		&FilterCondition{ObjectType: "Mailbox"},
 		&FilterCondition{ObjectAccountID: "a1"},
 	))

@@ -1,7 +1,7 @@
 package websocket_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -29,7 +29,7 @@ func TestCapabilityUnmarshalFromSession(t *testing.T) {
 	  "state": "s1"
 	}`
 	s := &jmap.Session{}
-	require.NoError(t, json.Unmarshal([]byte(blob), s))
+	require.NoError(t, jsonv2.Unmarshal([]byte(blob), s))
 	cap, ok := s.Capabilities[websocket.URI].(*websocket.WebSocket)
 	require.True(t, ok)
 	assert.Equal(t, "wss://server.example.com/jmap/ws/", cap.URL)
@@ -39,6 +39,6 @@ func TestCapabilityUnmarshalFromSession(t *testing.T) {
 func TestStateChangePushState(t *testing.T) {
 	raw := `{"@type":"StateChange","changed":{"a1":{"Email":"e1"}},"pushState":"bbb"}`
 	var sc jmap.StateChange
-	require.NoError(t, json.Unmarshal([]byte(raw), &sc))
+	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &sc))
 	assert.Equal(t, "bbb", sc.PushState)
 }

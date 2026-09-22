@@ -4,6 +4,7 @@ import (
 	jsonv2 "encoding/json/v2"
 	"testing"
 
+	"github.com/Janso123/go-jmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -128,4 +129,49 @@ func TestEventPrivacyAndFreeBusy(t *testing.T) {
 	b, err := jsonv2.Marshal(ev)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"@type":"Event","uid":"u1","priority":5,"freeBusyStatus":"busy","privacy":"private"}`, string(b))
+}
+
+func TestEventRecurrenceNullStaysNull(t *testing.T) {
+	t.Parallel()
+	var ev Event
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"recurrenceRule":null,"recurrenceOverrides":null}`), &ev))
+	require.True(t, ev.RecurrenceRule.IsNull())
+	require.True(t, ev.RecurrenceOverrides.IsNull())
+	b, err := jsonv2.Marshal(&ev)
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"recurrenceRule":null`)
+	require.Contains(t, string(b), `"recurrenceOverrides":null`)
+}
+
+func TestLinkCIDRoundTripsViaExtra(t *testing.T) {
+	t.Parallel()
+	const input = `{"cid":"abc","href":"https://e"}`
+	var link Link
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &link))
+	raw, ok := link.Extra["cid"]
+	require.True(t, ok)
+	require.JSONEq(t, `"abc"`, string(raw))
+	require.Equal(t, "https://e", link.Href)
+	out, err := jsonv2.Marshal(&link)
+	require.NoError(t, err)
+	require.JSONEq(t, input, string(out))
+}
+
+func TestLinkSizeZero(t *testing.T) {
+	t.Parallel()
+	b, err := jsonv2.Marshal(Link{Size: new(jmap.UnsignedInt(0))})
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"size":0`)
+}
+
+func TestLinkBlobIDNotOnlyInExtra(t *testing.T) {
+	t.Parallel()
+	var l Link
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"href":"https://ex/a","blobId":"b1"}`), &l))
+	_, inExtra := l.Extra["blobId"]
+	require.False(t, inExtra)
+	require.Equal(t, jmap.ID("b1"), l.BlobID)
+	b, err := jsonv2.Marshal(&l)
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"blobId":"b1"`)
 }

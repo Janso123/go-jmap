@@ -1,6 +1,7 @@
 package email
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/Janso123/go-jmap"
@@ -16,7 +17,8 @@ func propertiesNeedSMIME(props []string) bool {
 	return false
 }
 
-func filterNeedsSMIME(f jmap.Filter) bool {
+// FilterNeedsSMIME reports whether f uses hasSmime* conditions (RFC 9219).
+func FilterNeedsSMIME(f jmap.Filter) bool {
 	if f == nil {
 		return false
 	}
@@ -26,16 +28,12 @@ func filterNeedsSMIME(f jmap.Filter) bool {
 	case FilterCondition:
 		return x.HasSMIME != nil || x.HasVerifiedSMIME != nil || x.HasVerifiedSMIMEAtDelivery != nil
 	case *jmap.FilterOperator:
-		for _, c := range x.Conditions {
-			if filterNeedsSMIME(c) {
-				return true
-			}
+		if slices.ContainsFunc(x.Conditions, FilterNeedsSMIME) {
+			return true
 		}
 	case jmap.FilterOperator:
-		for _, c := range x.Conditions {
-			if filterNeedsSMIME(c) {
-				return true
-			}
+		if slices.ContainsFunc(x.Conditions, FilterNeedsSMIME) {
+			return true
 		}
 	}
 	return false

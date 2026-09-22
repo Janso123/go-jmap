@@ -19,9 +19,9 @@ type Identity struct {
 
 	Email string `json:"email,omitzero"`
 
-	ReplyTo []*mail.Address `json:"replyTo,omitzero"`
+	ReplyTo jmap.Optional[[]*mail.Address] `json:"replyTo,omitzero"`
 
-	Bcc []*mail.Address `json:"bcc,omitzero"`
+	Bcc jmap.Optional[[]*mail.Address] `json:"bcc,omitzero"`
 
 	TextSignature string `json:"textSignature,omitzero"`
 
@@ -31,6 +31,8 @@ type Identity struct {
 }
 
 func (Identity) JMAPType() string { return "Identity" }
+
+func (Identity) JMAPCreatable() {}
 
 func (Identity) Requires() []jmap.URI {
 	return []jmap.URI{emailsubmission.URI}

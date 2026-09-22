@@ -1,7 +1,7 @@
 package jmap
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +22,7 @@ func TestRequestMarshal(t *testing.T) {
 		Using: []URI{"urn:ietf:params:jmap:core"},
 		Calls: []*Invocation{inv},
 	}
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	assert.NoError(err)
 	expected := `{"using":["urn:ietf:params:jmap:core"],"methodCalls":[["Core/echo",{"Hello":"world"},"0"]]}`
 	assert.Equal(expected, string(data))

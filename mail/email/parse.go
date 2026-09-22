@@ -21,7 +21,9 @@ type Parse struct {
 
 	FetchAllBodyValues bool `json:"fetchAllBodyValues,omitzero"`
 
-	MaxBodyValueBytes uint64 `json:"maxBodyValueBytes,omitzero"`
+	// MaxBodyValueBytes is optional. Nil omits the field (server default).
+	// A pointer to 0 is sent so the server fetches zero bytes (RFC 8621 §4.9).
+	MaxBodyValueBytes *jmap.UnsignedInt `json:"maxBodyValueBytes,omitzero"`
 }
 
 func (m *Parse) Name() string { return "Email/parse" }
@@ -33,11 +35,13 @@ func (m *Parse) Requires() []jmap.URI {
 type ParseResponse struct {
 	Account jmap.ID `json:"accountId,omitzero"`
 
-	Parsed map[jmap.ID]*Email `json:"parsed,omitzero"`
+	// Parsed, NotParsable and NotFound are JSON null when empty
+	// (RFC 8621 §4.9).
+	Parsed jmap.Optional[map[jmap.ID]*Email] `json:"parsed,omitzero"`
 
-	NotParsable []jmap.ID `json:"notParsable,omitzero"`
+	NotParsable jmap.Optional[[]jmap.ID] `json:"notParsable,omitzero"`
 
-	NotFound []jmap.ID `json:"notFound,omitzero"`
+	NotFound jmap.Optional[[]jmap.ID] `json:"notFound,omitzero"`
 }
 
 func newParseResponse() jmap.MethodResponse { return &ParseResponse{} }

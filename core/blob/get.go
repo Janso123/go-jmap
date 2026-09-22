@@ -1,8 +1,12 @@
 package blob
 
 import (
-	"encoding/json"
+	"fmt"
+	"sort"
 	"strings"
+
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 
 	"github.com/Janso123/go-jmap"
 )
@@ -12,12 +16,15 @@ import (
 type Get struct {
 	Account jmap.ID `json:"accountId,omitzero"`
 
-	IDs []jmap.ID `json:"ids,omitzero"`
+	IDs jmap.Optional[[]jmap.ID] `json:"ids,omitzero"`
 
 	Properties []string `json:"properties,omitzero"`
 
-	Offset *uint64 `json:"offset,omitzero"`
-	Length *uint64 `json:"length,omitzero"`
+	Offset *jmap.UnsignedInt `json:"offset,omitzero"`
+	Length *jmap.UnsignedInt `json:"length,omitzero"`
+
+	ReferenceIDs        *jmap.ResultReference `json:"#ids,omitzero"`
+	ReferenceProperties *jmap.ResultReference `json:"#properties,omitzero"`
 }
 
 func (m *Get) Name() string { return "Blob/get" }
@@ -35,86 +42,159 @@ type GetResponse struct {
 type GetResult struct {
 	ID jmap.ID `json:"id,omitzero"`
 
-	DataAsText   *string `json:"data:asText,omitzero"`
-	DataAsBase64 *string `json:"data:asBase64,omitzero"`
+	DataAsText   jmap.Optional[string] `json:"data:asText,omitzero"`
+	DataAsBase64 jmap.Optional[string] `json:"data:asBase64,omitzero"`
 
-	IsEncodingProblem bool `json:"isEncodingProblem,omitzero"`
-	IsTruncated       bool `json:"isTruncated,omitzero"`
+	// Booleans stay on the wire when false.
+	IsEncodingProblem bool `json:"isEncodingProblem"`
+	IsTruncated       bool `json:"isTruncated"`
 
-	Size uint64 `json:"size,omitzero"`
+	// Size is server-set. Nil omits the key; a pointer to 0 stays "size":0.
+	Size *jmap.UnsignedInt `json:"size,omitzero"`
 
 	Digests map[string]string `json:"-"`
 }
 
-func (r GetResult) MarshalJSON() ([]byte, error) {
-	raw := map[string]any{}
-	if r.ID != "" {
-		raw["id"] = r.ID
-	}
-	if r.DataAsText != nil {
-		raw["data:asText"] = r.DataAsText
-	}
-	if r.DataAsBase64 != nil {
-		raw["data:asBase64"] = r.DataAsBase64
-	}
-	if r.IsEncodingProblem {
-		raw["isEncodingProblem"] = r.IsEncodingProblem
-	}
-	if r.IsTruncated {
-		raw["isTruncated"] = r.IsTruncated
-	}
-	if r.Size != 0 {
-		raw["size"] = r.Size
-	}
-	for algorithm, digest := range r.Digests {
-		raw["digest:"+algorithm] = digest
-	}
-	return json.Marshal(raw)
-}
-
-func (r *GetResult) UnmarshalJSON(data []byte) error {
-	*r = GetResult{}
-
-	raw := map[string]json.RawMessage{}
-	if err := json.Unmarshal(data, &raw); err != nil {
+// MarshalJSONTo writes fields in a fixed order: id, data:asText, data:asBase64,
+// digest:* sorted by algorithm, size, isEncodingProblem, isTruncated.
+func (r GetResult) MarshalJSONTo(enc *jsontext.Encoder) error {
+	if err := enc.WriteToken(jsontext.BeginObject); err != nil {
 		return err
 	}
+	if err := writeID(enc, "id", r.ID); err != nil {
+		return err
+	}
+	if err := writeOptionalString(enc, "data:asText", r.DataAsText); err != nil {
+		return err
+	}
+	if err := writeOptionalString(enc, "data:asBase64", r.DataAsBase64); err != nil {
+		return err
+	}
+	if err := writeDigests(enc, r.Digests); err != nil {
+		return err
+	}
+	if err := writeUintPtr(enc, "size", r.Size); err != nil {
+		return err
+	}
+	if err := writeBool(enc, "isEncodingProblem", r.IsEncodingProblem); err != nil {
+		return err
+	}
+	if err := writeBool(enc, "isTruncated", r.IsTruncated); err != nil {
+		return err
+	}
+	return enc.WriteToken(jsontext.EndObject)
+}
 
-	for key, value := range raw {
+func (r *GetResult) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	*r = GetResult{}
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return err
+	}
+	if tok.Kind() != '{' {
+		return fmt.Errorf("blob: GetResult: expected JSON object, got %v", tok.Kind())
+	}
+	for dec.PeekKind() != '}' {
+		keyTok, err := dec.ReadToken()
+		if err != nil {
+			return err
+		}
+		key := keyTok.String()
 		switch {
 		case key == "id":
-			if err := json.Unmarshal(value, &r.ID); err != nil {
-				return err
-			}
+			err = jsonv2.UnmarshalDecode(dec, &r.ID)
 		case key == "data:asText":
-			if err := json.Unmarshal(value, &r.DataAsText); err != nil {
-				return err
-			}
+			err = jsonv2.UnmarshalDecode(dec, &r.DataAsText)
 		case key == "data:asBase64":
-			if err := json.Unmarshal(value, &r.DataAsBase64); err != nil {
-				return err
-			}
+			err = jsonv2.UnmarshalDecode(dec, &r.DataAsBase64)
 		case key == "isEncodingProblem":
-			if err := json.Unmarshal(value, &r.IsEncodingProblem); err != nil {
-				return err
-			}
+			err = jsonv2.UnmarshalDecode(dec, &r.IsEncodingProblem)
 		case key == "isTruncated":
-			if err := json.Unmarshal(value, &r.IsTruncated); err != nil {
-				return err
-			}
+			err = jsonv2.UnmarshalDecode(dec, &r.IsTruncated)
 		case key == "size":
-			if err := json.Unmarshal(value, &r.Size); err != nil {
-				return err
-			}
+			var n *jmap.UnsignedInt
+			err = jsonv2.UnmarshalDecode(dec, &n)
+			r.Size = n
 		case strings.HasPrefix(key, "digest:"):
+			if dec.PeekKind() == 'n' {
+				_, err = dec.ReadValue()
+				break
+			}
 			if r.Digests == nil {
 				r.Digests = map[string]string{}
 			}
 			var digest string
-			if err := json.Unmarshal(value, &digest); err != nil {
+			if err = jsonv2.UnmarshalDecode(dec, &digest); err != nil {
 				return err
 			}
 			r.Digests[strings.TrimPrefix(key, "digest:")] = digest
+		default:
+			_, err = dec.ReadValue()
+		}
+		if err != nil {
+			return err
+		}
+	}
+	_, err = dec.ReadToken()
+	return err
+}
+
+func writeID(enc *jsontext.Encoder, key string, id jmap.ID) error {
+	if id == "" {
+		return nil
+	}
+	if err := enc.WriteToken(jsontext.String(key)); err != nil {
+		return err
+	}
+	return id.MarshalJSONTo(enc)
+}
+
+func writeOptionalString(enc *jsontext.Encoder, key string, v jmap.Optional[string]) error {
+	if v.IsZero() {
+		return nil
+	}
+	if err := enc.WriteToken(jsontext.String(key)); err != nil {
+		return err
+	}
+	return v.MarshalJSONTo(enc)
+}
+
+func writeStringField(enc *jsontext.Encoder, key, value string) error {
+	if err := enc.WriteToken(jsontext.String(key)); err != nil {
+		return err
+	}
+	return enc.WriteToken(jsontext.String(value))
+}
+
+func writeUintPtr(enc *jsontext.Encoder, key string, v *jmap.UnsignedInt) error {
+	if v == nil {
+		return nil
+	}
+	if err := enc.WriteToken(jsontext.String(key)); err != nil {
+		return err
+	}
+	return v.MarshalJSONTo(enc)
+}
+
+func writeBool(enc *jsontext.Encoder, key string, v bool) error {
+	if err := enc.WriteToken(jsontext.String(key)); err != nil {
+		return err
+	}
+	return enc.WriteToken(jsontext.Bool(v))
+}
+
+func writeDigests(enc *jsontext.Encoder, digests map[string]string) error {
+	if len(digests) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(digests))
+	for algo := range digests {
+		keys = append(keys, algo)
+	}
+	sort.Strings(keys)
+	for _, algo := range keys {
+		if err := writeStringField(enc, "digest:"+algo, digests[algo]); err != nil {
+			return err
 		}
 	}
 	return nil

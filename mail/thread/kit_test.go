@@ -11,7 +11,7 @@ import (
 )
 
 func TestThreadGetEmbedsKit(t *testing.T) {
-	m := &thread.Get{Get: jmap.Get[thread.Thread]{Account: "a1"}}
+	m := &thread.Get{Account: "a1"}
 	require.Equal(t, "Thread/get", m.Name())
 	b, err := jsonv2.Marshal(m)
 	require.NoError(t, err)

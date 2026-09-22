@@ -1,7 +1,7 @@
 package principal
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -19,7 +19,7 @@ func TestChanges(t *testing.T) {
 	id := req.Invoke(m)
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	assert.NoError(t, err)
 	expected := `{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["Principal/changes",{"accountId":"account-id","sinceState":"1234"},"0"]]}`
 	assert.Equal(t, expected, string(data))
@@ -40,7 +40,7 @@ func TestChanges(t *testing.T) {
 			},
 		}
 
-		data, err := json.Marshal(req)
+		data, err := jsonv2.Marshal(req)
 		assert.NoError(t, err)
 		expected := `{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["Principal/changes",{"accountId":"account-id","sinceState":"1234"},"manual"]]}`
 		assert.Equal(t, expected, string(data))

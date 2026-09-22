@@ -1,7 +1,7 @@
 package sharing_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -40,12 +40,13 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 	}`
 
 	var session jmap.Session
-	require.NoError(t, json.Unmarshal([]byte(raw), &session))
+	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &session))
 
-	sessionCap, ok := session.Capabilities[sharing.URI].(*sharing.Capability)
+	sessionCap, ok := session.Capabilities[sharing.URI].(*sharing.AccountCapability)
 	require.True(t, ok)
-	require.NotNil(t, sessionCap.CurrentUserPrincipalID)
-	assert.Equal(t, jmap.ID("p1"), *sessionCap.CurrentUserPrincipalID)
+	id, idOK := sessionCap.CurrentUserPrincipalID.Value()
+	require.True(t, idOK)
+	assert.Equal(t, jmap.ID("p1"), id)
 
 	accountCap, ok := session.Accounts["a1"].Capabilities[sharing.OwnerURI].(*sharing.OwnerCapability)
 	require.True(t, ok)

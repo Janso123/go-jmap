@@ -9,7 +9,7 @@ type Set struct {
 
 	OnDestroyRemoveContents bool `json:"onDestroyRemoveContents,omitzero"`
 
-	OnSuccessSetIsDefault jmap.ID `json:"onSuccessSetIsDefault,omitzero"`
+	OnSuccessSetIsDefault jmap.Optional[jmap.ID] `json:"onSuccessSetIsDefault,omitzero"`
 }
 
 // SetResponse is the result of AddressBook/set.

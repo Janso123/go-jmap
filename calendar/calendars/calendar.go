@@ -12,8 +12,6 @@ func init() {
 			jmap.MethodChanges |
 			jmap.MethodSet,
 	)
-	// Calendar/changes includes updatedProperties; override kit factory.
-	jmap.RegisterMethod("Calendar/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 // Calendar is a named collection of events.
@@ -23,9 +21,9 @@ type Calendar struct {
 
 	Name string `json:"name,omitzero"`
 
-	Description *string `json:"description,omitzero"`
+	Description jmap.Optional[string] `json:"description,omitzero"`
 
-	Color *string `json:"color,omitzero"`
+	Color jmap.Optional[string] `json:"color,omitzero"`
 
 	SortOrder uint64 `json:"sortOrder,omitzero"`
 
@@ -33,22 +31,24 @@ type Calendar struct {
 
 	IsVisible *bool `json:"isVisible,omitzero"`
 
-	IsDefault bool `json:"isDefault,omitzero"`
+	IsDefault *bool `json:"isDefault,omitzero"`
 
 	IncludeInAvailability IncludeInAvailability `json:"includeInAvailability,omitzero"`
 
-	DefaultAlertsWithTime map[jmap.ID]*jscalendar.Alert `json:"defaultAlertsWithTime,omitzero"`
+	DefaultAlertsWithTime jmap.Optional[map[jmap.ID]*jscalendar.Alert] `json:"defaultAlertsWithTime,omitzero"`
 
-	DefaultAlertsWithoutTime map[jmap.ID]*jscalendar.Alert `json:"defaultAlertsWithoutTime,omitzero"`
+	DefaultAlertsWithoutTime jmap.Optional[map[jmap.ID]*jscalendar.Alert] `json:"defaultAlertsWithoutTime,omitzero"`
 
-	TimeZone jscalendar.TimeZoneID `json:"timeZone,omitzero"`
+	TimeZone jmap.Optional[jscalendar.TimeZoneID] `json:"timeZone,omitzero"`
 
-	ShareWith map[jmap.ID]*Rights `json:"shareWith,omitzero"`
+	ShareWith jmap.Optional[map[jmap.ID]*Rights] `json:"shareWith,omitzero"`
 
 	MyRights *Rights `json:"myRights,omitzero"`
 }
 
 func (Calendar) JMAPType() string { return "Calendar" }
+
+func (Calendar) JMAPCreatable() {}
 
 func (Calendar) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }
 
@@ -62,19 +62,19 @@ const (
 
 // Rights is the set of permissions the user has in relation to a Calendar.
 type Rights struct {
-	MayReadFreeBusy bool `json:"mayReadFreeBusy,omitzero"`
+	MayReadFreeBusy bool `json:"mayReadFreeBusy"`
 
-	MayReadItems bool `json:"mayReadItems,omitzero"`
+	MayReadItems bool `json:"mayReadItems"`
 
-	MayWriteAll bool `json:"mayWriteAll,omitzero"`
+	MayWriteAll bool `json:"mayWriteAll"`
 
-	MayWriteOwn bool `json:"mayWriteOwn,omitzero"`
+	MayWriteOwn bool `json:"mayWriteOwn"`
 
-	MayUpdatePrivate bool `json:"mayUpdatePrivate,omitzero"`
+	MayUpdatePrivate bool `json:"mayUpdatePrivate"`
 
-	MayRSVP bool `json:"mayRSVP,omitzero"`
+	MayRSVP bool `json:"mayRSVP"`
 
-	MayShare bool `json:"mayShare,omitzero"`
+	MayShare bool `json:"mayShare"`
 
-	MayDelete bool `json:"mayDelete,omitzero"`
+	MayDelete bool `json:"mayDelete"`
 }

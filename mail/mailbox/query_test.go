@@ -23,5 +23,5 @@ func TestQuery(t *testing.T) {
 	}
 	data, err := jsonv2.Marshal(query)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"accountId":"xyz","limit":10,"filter":{"name":"Inbox"},"sort":[{"property":"name","isAscending":false}]}`, string(data))
+	require.JSONEq(t, `{"accountId":"xyz","limit":10,"filter":{"name":"Inbox"},"sort":[{"property":"name"}]}`, string(data))
 }

@@ -14,7 +14,7 @@ type Send struct {
 
 	Send map[jmap.ID]*MDN `json:"send,omitzero"`
 
-	OnSuccessUpdateEmail map[jmap.ID]*jmap.Patch `json:"onSuccessUpdateEmail,omitzero"`
+	OnSuccessUpdateEmail jmap.Optional[map[jmap.ID]*jmap.Patch] `json:"onSuccessUpdateEmail,omitzero"`
 }
 
 func (m *Send) Name() string { return "MDN/send" }
@@ -24,9 +24,9 @@ func (m *Send) Requires() []jmap.URI { return []jmap.URI{mail.URI, URI} }
 type SendResponse struct {
 	Account jmap.ID `json:"accountId,omitzero"`
 
-	Sent map[jmap.ID]*MDN `json:"sent,omitzero"`
+	Sent jmap.Optional[map[jmap.ID]*MDN] `json:"sent,omitzero"`
 
-	NotSent map[jmap.ID]*jmap.SetError `json:"notSent,omitzero"`
+	NotSent jmap.Optional[map[jmap.ID]*jmap.SetError] `json:"notSent,omitzero"`
 }
 
 func newSendResponse() jmap.MethodResponse { return &SendResponse{} }

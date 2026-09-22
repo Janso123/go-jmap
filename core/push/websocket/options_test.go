@@ -1,9 +1,12 @@
 package websocket
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -82,7 +85,7 @@ func TestDialURLMaxConcurrentRequests(t *testing.T) {
 				Type string `json:"@type"`
 				ID   string `json:"id"`
 			}
-			if err := json.Unmarshal(data, &probe); err != nil || probe.Type != "Request" {
+			if err := jsonv2.Unmarshal(data, &probe); err != nil || probe.Type != "Request" {
 				continue
 			}
 			mu.Lock()
@@ -215,7 +218,7 @@ func TestConnAutoReconnect(t *testing.T) {
 				ID        string `json:"id"`
 				PushState string `json:"pushState"`
 			}
-			if err := json.Unmarshal(data, &probe); err != nil {
+			if err := jsonv2.Unmarshal(data, &probe); err != nil {
 				continue
 			}
 			switch probe.Type {
@@ -264,7 +267,7 @@ func TestConnAutoReconnect(t *testing.T) {
 	conn.mu.Lock()
 	conn.pushState = "bbb"
 	conn.mu.Unlock()
-	require.NoError(t, conn.EnablePush([]jmap.EventType{"Email"}, "bbb"))
+	require.NoError(t, conn.EnablePush(context.Background(), []jmap.EventType{"Email"}, "bbb"))
 
 	select {
 	case ps := <-pushStates:
@@ -292,4 +295,168 @@ func TestConnAutoReconnect(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.GreaterOrEqual(t, dials.Load(), int32(2))
+}
+
+func TestReconnectEnablePushFailure(t *testing.T) {
+	gotPush := make(chan string, 4)
+	var accepts atomic.Int32
+	releaseFirst := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(releaseFirst) }) }
+	defer release()
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := cws.Accept(w, r, &cws.AcceptOptions{
+			Subprotocols:       []string{"jmap"},
+			InsecureSkipVerify: true,
+		})
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+		n := accepts.Add(1)
+		ctx := context.Background()
+		_, data, err := c.Read(ctx)
+		if err != nil {
+			return
+		}
+		var probe struct {
+			Type      string `json:"@type"`
+			PushState string `json:"pushState"`
+		}
+		if jsonv2.Unmarshal(data, &probe) == nil && probe.Type == "WebSocketPushEnable" {
+			gotPush <- probe.PushState
+		}
+		if n == 1 {
+			<-releaseFirst
+			return
+		}
+		_, _, _ = c.Read(ctx)
+	}))
+	defer s.Close()
+
+	var dialN atomic.Int32
+	tr := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			var d net.Dialer
+			c, err := d.DialContext(ctx, network, addr)
+			if err != nil {
+				return nil, err
+			}
+			n := dialN.Add(1)
+			return &failPostHandshakeWriteConn{Conn: c, fail: n == 2}, nil
+		},
+	}
+
+	wsURL := "ws" + strings.TrimPrefix(s.URL, "http") + "/"
+	jc := (&jmap.Client{HttpClient: &http.Client{Transport: tr}}).WithAccessToken("tok")
+	jc.Session = &jmap.Session{
+		RawCapabilities: map[jmap.URI]jsontext.Value{
+			jmap.CoreURI: []byte(`{}`),
+		},
+		Capabilities: map[jmap.URI]jmap.Capability{
+			URI: &WebSocket{URL: wsURL, SupportsPush: true},
+		},
+	}
+
+	var conn *Conn
+	var err error
+	second := make(chan bool, 1)
+	reconnected := make(chan struct{}, 1)
+	var discs atomic.Int32
+	conn, err = DialURL(context.Background(), jc, wsURL, Options{
+		Reconnect: &ReconnectOptions{
+			MinBackoff: 10 * time.Millisecond,
+			MaxBackoff: 40 * time.Millisecond,
+			OnReconnect: func() {
+				// Fires only after re-EnablePush returns and pushEnabled is set.
+				select {
+				case reconnected <- struct{}{}:
+				default:
+				}
+			},
+			OnDisconnect: func(error) {
+				if discs.Add(1) == 2 && conn != nil {
+					conn.mu.Lock()
+					enabled := conn.pushEnabled
+					conn.mu.Unlock()
+					second <- enabled
+				}
+			},
+		},
+	})
+	require.NoError(t, err)
+	defer conn.Close()
+
+	require.NoError(t, conn.EnablePush(context.Background(), []jmap.EventType{"Email"}, "bbb"))
+	select {
+	case ps := <-gotPush:
+		assert.Equal(t, "bbb", ps)
+	case <-time.After(2 * time.Second):
+		t.Fatal("first EnablePush not received")
+	}
+	conn.mu.Lock()
+	assert.True(t, conn.pushEnabled)
+	conn.mu.Unlock()
+	release()
+
+	select {
+	case enabled := <-second:
+		assert.False(t, enabled, "pushEnabled must stay false when re-EnablePush write fails")
+	case <-time.After(3 * time.Second):
+		t.Fatal("re-EnablePush failure did not trigger OnDisconnect again")
+	}
+
+	select {
+	case <-reconnected:
+	case <-time.After(3 * time.Second):
+		t.Fatal("push enable did not succeed on a later reconnect")
+	}
+	select {
+	case ps := <-gotPush:
+		assert.Equal(t, "bbb", ps)
+	case <-time.After(3 * time.Second):
+		t.Fatal("push enable did not succeed on a later reconnect")
+	}
+	conn.mu.Lock()
+	assert.True(t, conn.pushEnabled, "pushEnabled must be true once re-EnablePush has completed")
+	conn.mu.Unlock()
+}
+
+// failPostHandshakeWriteConn fails Write after the HTTP response headers
+// have been read, so the WebSocket handshake can succeed and the next
+// client frame (re-EnablePush) fails.
+type failPostHandshakeWriteConn struct {
+	net.Conn
+	fail bool
+
+	mu  sync.Mutex
+	buf []byte
+	hdr bool
+}
+
+func (c *failPostHandshakeWriteConn) Read(p []byte) (int, error) {
+	n, err := c.Conn.Read(p)
+	if n > 0 {
+		c.mu.Lock()
+		if !c.hdr {
+			c.buf = append(c.buf, p[:n]...)
+			if bytes.Contains(c.buf, []byte("\r\n\r\n")) {
+				c.hdr = true
+				c.buf = nil
+			}
+		}
+		c.mu.Unlock()
+	}
+	return n, err
+}
+
+func (c *failPostHandshakeWriteConn) Write(p []byte) (int, error) {
+	c.mu.Lock()
+	fail := c.fail && c.hdr
+	c.mu.Unlock()
+	if fail {
+		return 0, errors.New("forced websocket write failure")
+	}
+	return c.Conn.Write(p)
 }

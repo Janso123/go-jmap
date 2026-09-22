@@ -3,6 +3,8 @@ package jscontact
 import (
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
+
+	"github.com/Janso123/go-jmap"
 )
 
 type UTCDateTime string
@@ -59,21 +61,21 @@ type Relation struct {
 }
 
 type Name struct {
-	Type             string            `json:"@type,omitzero"`
-	Components       []*NameComponent  `json:"components,omitzero"`
-	IsOrdered        bool              `json:"isOrdered,omitzero"`
-	DefaultSeparator string            `json:"defaultSeparator,omitzero"`
-	Full             string            `json:"full,omitzero"`
-	SortAs           map[string]string `json:"sortAs,omitzero"`
-	PhoneticScript   string            `json:"phoneticScript,omitzero"`
-	PhoneticSystem   string            `json:"phoneticSystem,omitzero"`
+	Type             string                `json:"@type,omitzero"`
+	Components       []*NameComponent      `json:"components,omitzero"`
+	IsOrdered        bool                  `json:"isOrdered,omitzero"`
+	DefaultSeparator jmap.Optional[string] `json:"defaultSeparator,omitzero"`
+	Full             string                `json:"full,omitzero"`
+	SortAs           map[string]string     `json:"sortAs,omitzero"`
+	PhoneticScript   string                `json:"phoneticScript,omitzero"`
+	PhoneticSystem   string                `json:"phoneticSystem,omitzero"`
 
 	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type NameComponent struct {
 	Type     string `json:"@type,omitzero"`
-	Value    string `json:"value,omitzero"`
+	Value    string `json:"value"`
 	Kind     string `json:"kind,omitzero"`
 	Phonetic string `json:"phonetic,omitzero"`
 
@@ -189,8 +191,6 @@ type Resource struct {
 
 type Calendar struct {
 	Resource
-
-	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type SchedulingAddress struct {
@@ -204,25 +204,25 @@ type SchedulingAddress struct {
 }
 
 type Address struct {
-	Type             string              `json:"@type,omitzero"`
-	Components       []*AddressComponent `json:"components,omitzero"`
-	IsOrdered        bool                `json:"isOrdered,omitzero"`
-	CountryCode      string              `json:"countryCode,omitzero"`
-	Coordinates      string              `json:"coordinates,omitzero"`
-	TimeZone         string              `json:"timeZone,omitzero"`
-	Contexts         map[string]bool     `json:"contexts,omitzero"`
-	Full             string              `json:"full,omitzero"`
-	DefaultSeparator string              `json:"defaultSeparator,omitzero"`
-	Pref             uint64              `json:"pref,omitzero"`
-	PhoneticScript   string              `json:"phoneticScript,omitzero"`
-	PhoneticSystem   string              `json:"phoneticSystem,omitzero"`
+	Type             string                `json:"@type,omitzero"`
+	Components       []*AddressComponent   `json:"components,omitzero"`
+	IsOrdered        bool                  `json:"isOrdered,omitzero"`
+	CountryCode      string                `json:"countryCode,omitzero"`
+	Coordinates      string                `json:"coordinates,omitzero"`
+	TimeZone         string                `json:"timeZone,omitzero"`
+	Contexts         map[string]bool       `json:"contexts,omitzero"`
+	Full             string                `json:"full,omitzero"`
+	DefaultSeparator jmap.Optional[string] `json:"defaultSeparator,omitzero"`
+	Pref             uint64                `json:"pref,omitzero"`
+	PhoneticScript   string                `json:"phoneticScript,omitzero"`
+	PhoneticSystem   string                `json:"phoneticSystem,omitzero"`
 
 	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type AddressComponent struct {
 	Type     string `json:"@type,omitzero"`
-	Value    string `json:"value,omitzero"`
+	Value    string `json:"value"`
 	Kind     string `json:"kind,omitzero"`
 	Phonetic string `json:"phonetic,omitzero"`
 
@@ -231,27 +231,20 @@ type AddressComponent struct {
 
 type CryptoKey struct {
 	Resource
-
-	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Directory struct {
 	Resource
 	ListAs uint64 `json:"listAs,omitzero"`
-
-	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Link struct {
 	Resource
-
-	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 type Media struct {
 	Resource
-
-	Extra map[string]jsontext.Value `json:",embed"`
+	BlobID jmap.ID `json:"blobId,omitzero"`
 }
 
 type Anniversary struct {
@@ -266,6 +259,10 @@ type Anniversary struct {
 type AnniversaryDate struct {
 	PartialDate *PartialDate
 	Timestamp   *Timestamp
+}
+
+func (d AnniversaryDate) IsZero() bool {
+	return d.PartialDate == nil && d.Timestamp == nil
 }
 
 func (d AnniversaryDate) MarshalJSON() ([]byte, error) {
@@ -305,11 +302,11 @@ func (d *AnniversaryDate) UnmarshalJSON(data []byte) error {
 }
 
 type PartialDate struct {
-	Type          string `json:"@type,omitzero"`
-	Year          uint64 `json:"year,omitzero"`
-	Month         uint64 `json:"month,omitzero"`
-	Day           uint64 `json:"day,omitzero"`
-	CalendarScale string `json:"calendarScale,omitzero"`
+	Type          string            `json:"@type,omitzero"`
+	Year          *jmap.UnsignedInt `json:"year,omitzero"`
+	Month         uint64            `json:"month,omitzero"`
+	Day           uint64            `json:"day,omitzero"`
+	CalendarScale string            `json:"calendarScale,omitzero"`
 
 	Extra map[string]jsontext.Value `json:",embed"`
 }

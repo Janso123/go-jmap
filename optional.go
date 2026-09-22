@@ -1,11 +1,17 @@
 package jmap
 
 import (
+	"bytes"
+	"errors"
+
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 )
 
 // Optional is a JSON field that is omitted, JSON null, or a value.
+//
+// T must not be a pointer type; Some((*T)(nil)) would marshal as null and
+// collide with Null().
 type Optional[T any] struct {
 	value T
 	null  bool
@@ -37,7 +43,12 @@ func (o Optional[T]) Value() (T, bool) {
 	return o.value, true
 }
 
+var errUnsetOptional = errors.New("jmap: cannot marshal unset Optional; use omitzero on the struct field")
+
 func (o Optional[T]) MarshalJSONTo(enc *jsontext.Encoder) error {
+	if !o.set {
+		return errUnsetOptional
+	}
 	if o.null {
 		return enc.WriteToken(jsontext.Null)
 	}
@@ -61,14 +72,17 @@ func (o *Optional[T]) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 }
 
 func (o Optional[T]) MarshalJSON() ([]byte, error) {
-	if !o.set || o.null {
+	if !o.set {
+		return nil, errUnsetOptional
+	}
+	if o.null {
 		return []byte("null"), nil
 	}
 	return jsonv2.Marshal(o.value)
 }
 
 func (o *Optional[T]) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if string(bytes.TrimSpace(data)) == "null" {
 		*o = Null[T]()
 		return nil
 	}

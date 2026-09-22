@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"encoding/json"
 	jsonv2 "encoding/json/v2"
 	"testing"
 
@@ -18,7 +17,7 @@ func TestMarshalWSRequest(t *testing.T) {
 	raw, err := marshalRequest("R1", req)
 	require.NoError(t, err)
 	var m map[string]any
-	require.NoError(t, json.Unmarshal(raw, &m))
+	require.NoError(t, jsonv2.Unmarshal(raw, &m))
 	assert.Equal(t, "Request", m["@type"])
 	assert.Equal(t, "R1", m["id"])
 	assert.NotNil(t, m["methodCalls"])
@@ -71,7 +70,9 @@ func TestDecodeServerFrames(t *testing.T) {
 	assert.Equal(t, "R2", fr.RequestError.RequestID)
 	assert.Equal(t, "Bad", fr.RequestError.Title)
 	assert.Equal(t, 400, fr.RequestError.Status)
-	assert.Equal(t, "bad", fr.RequestError.Detail)
+	detail, ok := fr.RequestError.Detail.Value()
+	assert.True(t, ok)
+	assert.Equal(t, "bad", detail)
 
 	alertRaw := `{"@type":"CalendarAlert","accountId":"a","calendarEventId":"e","uid":"u","alertId":"al"}`
 	fr, err = decodeServerFrame([]byte(alertRaw))

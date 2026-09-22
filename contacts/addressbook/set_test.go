@@ -1,7 +1,7 @@
 package addressbook
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -16,11 +16,11 @@ func TestSetInvokeUsesContactsCapabilityAndExtras(t *testing.T) {
 	id := req.Invoke(&Set{
 		Account:                 "u1",
 		OnDestroyRemoveContents: true,
-		OnSuccessSetIsDefault:   "#create-ab1",
+		OnSuccessSetIsDefault:   jmap.Some(jmap.ID("#create-ab1")),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["AddressBook/set",{"accountId":"u1","onDestroyRemoveContents":true,"onSuccessSetIsDefault":"#create-ab1"},"0"]]}`,
@@ -30,14 +30,14 @@ func TestSetInvokeUsesContactsCapabilityAndExtras(t *testing.T) {
 func TestSetJSON(t *testing.T) {
 	set := &Set{
 		Account: "u1",
-		Update: map[jmap.ID]jmap.Patch{
+		Update: jmap.Some(map[jmap.ID]jmap.Patch{
 			"ab1": {
 				"description": nil,
 			},
-		},
+		}),
 	}
 
-	data, err := json.Marshal(set)
+	data, err := jsonv2.Marshal(set)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"accountId":"u1","update":{"ab1":{"description":null}}}`,
@@ -46,4 +46,14 @@ func TestSetJSON(t *testing.T) {
 
 func TestSetRequiresContactsCapability(t *testing.T) {
 	assert.Equal(t, []jmap.URI{contacts.URI}, (&Set{}).Requires())
+}
+
+func TestOnSuccessSetIsDefaultNull(t *testing.T) {
+	t.Parallel()
+	var set Set
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"onSuccessSetIsDefault":null}`), &set))
+	require.True(t, set.OnSuccessSetIsDefault.IsNull())
+	data, err := jsonv2.Marshal(&set)
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"onSuccessSetIsDefault":null`)
 }

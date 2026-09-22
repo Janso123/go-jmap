@@ -1,5 +1,7 @@
 package jmap
 
+import "encoding/json/jsontext"
+
 // Request-level error type URIs (RFC 8620 §3.6.1).
 const (
 	ErrTypeUnknownCapability = "urn:ietf:params:jmap:error:unknownCapability"
@@ -9,6 +11,7 @@ const (
 )
 
 // A RequestError occurs when there is an error with the HTTP request.
+// It is also the RFC 7807 problem+json object returned for HTTP failures.
 type RequestError struct {
 	// The type of request error, eg "urn:ietf:params:jmap:error:limit"
 	Type string `json:"type"`
@@ -19,23 +22,32 @@ type RequestError struct {
 	// A short, human-readable summary of the problem type
 	Title string `json:"title,omitzero"`
 
-	// The description of the error
-	Detail string `json:"detail"`
+	// Detail is a human-readable explanation of this occurrence.
+	// JSON null stays null; an unset value omits the key.
+	Detail Optional[string] `json:"detail,omitzero"`
+
+	// Instance identifies this specific occurrence (RFC 7807).
+	// JSON null stays null; an unset value omits the key.
+	Instance Optional[string] `json:"instance,omitzero"`
 
 	// If the error is of type ErrTypeLimit, Limit will contain the name of the
 	// limit the request would have exceeded
-	Limit *string `json:"limit,omitzero"`
+	Limit Optional[string] `json:"limit,omitzero"`
 
 	// Server-assigned request id when present (problem+json / WebSocket)
 	RequestID string `json:"requestId,omitzero"`
+
+	// Extra holds problem+json extension members, including vendor properties.
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 func (e *RequestError) Error() string {
-	if e.Limit != nil {
-		return e.Detail + ": " + *e.Limit
+	detail, _ := e.Detail.Value()
+	if l, ok := e.Limit.Value(); ok {
+		return detail + ": " + l
 	}
-	if e.Detail != "" {
-		return e.Detail
+	if detail != "" {
+		return detail
 	}
 	return e.Type
 }
@@ -96,12 +108,15 @@ type MethodError struct {
 
 	// Description is available on some method errors (notably,
 	// invalidArguments)
-	Description *string `json:"description,omitzero"`
+	Description Optional[string] `json:"description,omitzero"`
+
+	// Extra holds RFC 8620 §3.6.2 extension properties.
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 func (m *MethodError) Error() string {
-	if m.Description != nil {
-		return m.Type + ": " + *m.Description
+	if d, ok := m.Description.Value(); ok {
+		return m.Type + ": " + d
 	}
 	return m.Type
 }
@@ -150,19 +165,22 @@ const (
 
 // A SetError is returned in set calls for individual record changes
 type SetError struct {
-	Type              string    `json:"type,omitzero"`
-	Description       *string   `json:"description,omitzero"`
-	Properties        *[]string `json:"properties,omitzero"`
-	ExistingID        ID        `json:"existingId,omitzero"`
-	NotFound          []ID      `json:"notFound,omitzero"`
-	MaxSize           *uint64   `json:"maxSize,omitzero"`
-	MaxRecipients     *uint64   `json:"maxRecipients,omitzero"`
-	InvalidRecipients []string  `json:"invalidRecipients,omitzero"`
+	Type              string             `json:"type,omitzero"`
+	Description       Optional[string]   `json:"description,omitzero"`
+	Properties        Optional[[]string] `json:"properties,omitzero"`
+	ExistingID        ID                 `json:"existingId,omitzero"`
+	NotFound          []ID               `json:"notFound,omitzero"`
+	MaxSize           *UnsignedInt       `json:"maxSize,omitzero"`
+	MaxRecipients     *UnsignedInt       `json:"maxRecipients,omitzero"`
+	InvalidRecipients []string           `json:"invalidRecipients,omitzero"`
+
+	// Extra holds RFC 8620 §5.3 extension properties ("Other properties MAY").
+	Extra map[string]jsontext.Value `json:",embed"`
 }
 
 func (s *SetError) Error() string {
-	if s.Description != nil {
-		return s.Type + ": " + *s.Description
+	if d, ok := s.Description.Value(); ok {
+		return s.Type + ": " + d
 	}
 	return s.Type
 }

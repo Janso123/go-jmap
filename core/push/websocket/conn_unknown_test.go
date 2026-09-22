@@ -2,8 +2,8 @@ package websocket
 
 import (
 	"context"
-	"encoding/json"
 	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -38,7 +38,7 @@ func TestConnDoUnknownMethodInMethodResponses(t *testing.T) {
 				Type string `json:"@type"`
 				ID   string `json:"id"`
 			}
-			if err := json.Unmarshal(data, &probe); err != nil {
+			if err := jsonv2.Unmarshal(data, &probe); err != nil {
 				return
 			}
 			if probe.Type != "Request" {
