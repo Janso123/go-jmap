@@ -5,6 +5,8 @@ package e2e
 import (
 	"context"
 	"errors"
+	"io"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -83,6 +85,63 @@ func call[T jmap.MethodResponse](t *testing.T, sc *scenario, st step, client *jm
 	}
 	rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: summary, Result: kindPass})
 	return got, true
+}
+
+func uploadBlob(t *testing.T, sc *scenario, st step, client *jmap.Client, account jmap.ID, body, contentType string) (jmap.ID, bool) {
+	t.Helper()
+	if sc.failed {
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: "an earlier step failed", Result: kindNotRun})
+		return "", false
+	}
+	resp, err := client.Upload(context.Background(), account, strings.NewReader(body), contentType)
+	if err != nil {
+		sc.failed = true
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: err.Error(), Result: kindFail})
+		t.Errorf("%s %s: %v", sc.name, st.Method, err)
+		return "", false
+	}
+	if resp == nil || resp.ID == "" {
+		sc.failed = true
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: "blob id missing", Result: kindFail})
+		t.Errorf("%s %s: blob id missing", sc.name, st.Method)
+		return "", false
+	}
+	summary := "blobId=" + string(resp.ID)
+	rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: summary, Result: kindPass})
+	return resp.ID, true
+}
+
+func downloadBlob(t *testing.T, sc *scenario, st step, client *jmap.Client, account, blobID jmap.ID, want string) ([]byte, bool) {
+	t.Helper()
+	if sc.failed {
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: "an earlier step failed", Result: kindNotRun})
+		return nil, false
+	}
+	rc, err := client.Download(context.Background(), account, blobID, jmap.DownloadOptions{Type: "text/plain"})
+	if err != nil {
+		sc.failed = true
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: err.Error(), Result: kindFail})
+		t.Errorf("%s %s: %v", sc.name, st.Method, err)
+		return nil, false
+	}
+	defer rc.Close()
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		sc.failed = true
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: err.Error(), Result: kindFail})
+		t.Errorf("%s %s: %v", sc.name, st.Method, err)
+		return nil, false
+	}
+	if want != "" && string(data) != want {
+		sc.failed = true
+		msg := "got " + strconv.Quote(string(data))
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: msg, Result: kindFail})
+		t.Errorf("%s %s: %s", sc.name, st.Method, msg)
+		return data, false
+	}
+	summary := "bytes=" + strconv.Itoa(len(data))
+	rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: summary, Result: kindPass})
+	return data, true
 }
 
 func skipRest(t *testing.T, sc *scenario, steps []step, reason string) {
