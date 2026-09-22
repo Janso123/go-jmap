@@ -21,13 +21,34 @@ jobs:
       - name: test
         run: go test -race -count=1 ./...
 
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - name: test
+        run: go test -tags e2e -count=1 -timeout 15m -v ./e2e/
+      - name: upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: e2e/report.md
+
   release:
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-report
+          path: e2e
 
       - name: Create GitHub Release
         env:
@@ -47,6 +68,8 @@ jobs:
           esac
 
           PREV="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          PASS="$(sed -n 's/^- pass: //p' e2e/report.md)"
+          FAIL="$(sed -n 's/^- fail: //p' e2e/report.md)"
           {
             echo "## Changes"
             echo
@@ -61,6 +84,13 @@ jobs:
               git log --pretty=format:'- %s (%h)' "$TAG"
               echo
             fi
+            echo
+            echo "<details>"
+            echo "<summary>Stalwart e2e (pass ${PASS}, fail ${FAIL})</summary>"
+            echo
+            cat e2e/report.md
+            echo
+            echo "</details>"
           } > /tmp/release-notes.md
 
           gh release create "$TAG" \

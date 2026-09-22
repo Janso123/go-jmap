@@ -253,6 +253,8 @@ go test -tags e2e -count=1 -timeout 10m -v ./e2e/
 
 Push a version tag (`vX.Y.Z` or prerelease like `v1.0.0-rc.1`). The [release workflow](.github/workflows/release.yml) runs tests, then creates a GitHub Release with auto-generated notes (tags containing `alpha` / `beta` / `rc` are marked prerelease).
 
+The release workflow also runs the Stalwart suite and appends `e2e/report.md` in a collapsed "Stalwart e2e (pass N, fail N)" section. The release is not published when that suite fails.
+
 ```bash
 git tag v1.0.0-rc.1
 git push origin v1.0.0-rc.1
