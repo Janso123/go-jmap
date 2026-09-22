@@ -1,7 +1,7 @@
 package contacts_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -38,17 +38,28 @@ func TestCapabilityUnmarshalFromSessionAndAccount(t *testing.T) {
 	}`
 
 	var session jmap.Session
-	require.NoError(t, json.Unmarshal([]byte(raw), &session))
+	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &session))
 
 	sessionCap, ok := session.Capabilities[contacts.URI].(*contacts.Capability)
 	require.True(t, ok)
-	assert.Nil(t, sessionCap.MaxAddressBooksPerCard)
+	assert.True(t, sessionCap.MaxAddressBooksPerCard.IsZero())
 	assert.Nil(t, sessionCap.MayCreateAddressBook)
 
 	accountCap, ok := session.Accounts["u1"].Capabilities[contacts.URI].(*contacts.Capability)
 	require.True(t, ok)
-	require.NotNil(t, accountCap.MaxAddressBooksPerCard)
-	assert.Equal(t, uint64(7), *accountCap.MaxAddressBooksPerCard)
+	perCard, ok := accountCap.MaxAddressBooksPerCard.Value()
+	require.True(t, ok)
+	assert.Equal(t, jmap.UnsignedInt(7), perCard)
 	require.NotNil(t, accountCap.MayCreateAddressBook)
 	assert.True(t, *accountCap.MayCreateAddressBook)
+}
+
+func TestMaxAddressBooksPerCardNull(t *testing.T) {
+	t.Parallel()
+	var cap contacts.Capability
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"maxAddressBooksPerCard":null}`), &cap))
+	require.True(t, cap.MaxAddressBooksPerCard.IsNull())
+	data, err := jsonv2.Marshal(&cap)
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"maxAddressBooksPerCard":null`)
 }

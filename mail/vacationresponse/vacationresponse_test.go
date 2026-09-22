@@ -13,7 +13,7 @@ import (
 func TestVacationFromDateUTC(t *testing.T) {
 	loc := time.FixedZone("CEST", 2*3600)
 	v := vacationresponse.VacationResponse{
-		FromDate: jmap.UTCDatePtr(time.Date(2026, 9, 21, 1, 0, 0, 0, loc)),
+		FromDate: jmap.Some(jmap.UTCDate(time.Date(2026, 9, 21, 1, 0, 0, 0, loc))),
 	}
 	b, err := jsonv2.Marshal(v)
 	require.NoError(t, err)
@@ -46,8 +46,7 @@ func TestVacationResponseMethodsRegistered(t *testing.T) {
 
 func TestVacationEmptySubjectOnWire(t *testing.T) {
 	t.Parallel()
-	empty := ""
-	v := vacationresponse.VacationResponse{Subject: &empty}
+	v := vacationresponse.VacationResponse{Subject: jmap.Some("")}
 	b, err := jsonv2.Marshal(v)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"subject":""}`, string(b))

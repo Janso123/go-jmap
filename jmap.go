@@ -70,8 +70,8 @@ const (
 
 // AddedItem is an item that has been added to the results of a Query
 type AddedItem struct {
-	ID    ID     `json:"id"`
-	Index uint64 `json:"index"`
+	ID    ID          `json:"id"`
+	Index UnsignedInt `json:"index"`
 }
 
 // ResultReference is a reference to a previous Invocations' result
@@ -93,12 +93,7 @@ type ResultReference struct {
 type CollationAlgo string
 
 const (
-	// Defined in RFC 4790.
-	ASCIINumeric CollationAlgo = "i;ascii-numeric"
-
-	// Defined in RFC 4790.
-	ASCIICasemap = "i;ascii-casemap"
-
-	// Defined in RFC 5051.
-	UnicodeCasemap = "i;unicode-casemap"
+	ASCIINumeric   CollationAlgo = "i;ascii-numeric"
+	ASCIICasemap   CollationAlgo = "i;ascii-casemap"
+	UnicodeCasemap CollationAlgo = "i;unicode-casemap"
 )

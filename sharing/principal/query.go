@@ -1,6 +1,11 @@
 package principal
 
 import (
+	"slices"
+
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+
 	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/calendar"
 	"github.com/Janso123/go-jmap/sharing"
@@ -14,6 +19,25 @@ type Query struct {
 	Filter jmap.Filter `json:"filter,omitzero"`
 
 	Sort []*jmap.Comparator `json:"sort,omitzero"`
+}
+
+type queryAlias Query
+
+func (q *Query) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	var s struct {
+		queryAlias
+		Filter jsontext.Value `json:"filter"`
+	}
+	if err := jsonv2.UnmarshalDecode(dec, &s); err != nil {
+		return err
+	}
+	f, err := jmap.UnmarshalFilter[FilterCondition](s.Filter)
+	if err != nil {
+		return err
+	}
+	*q = Query(s.queryAlias)
+	q.Filter = f
+	return nil
 }
 
 func (q *Query) Requires() []jmap.URI {
@@ -34,16 +58,12 @@ func filterHasCalendarAddress(f jmap.Filter) bool {
 	case FilterCondition:
 		return x.CalendarAddress != ""
 	case *jmap.FilterOperator:
-		for _, c := range x.Conditions {
-			if filterHasCalendarAddress(c) {
-				return true
-			}
+		if slices.ContainsFunc(x.Conditions, filterHasCalendarAddress) {
+			return true
 		}
 	case jmap.FilterOperator:
-		for _, c := range x.Conditions {
-			if filterHasCalendarAddress(c) {
-				return true
-			}
+		if slices.ContainsFunc(x.Conditions, filterHasCalendarAddress) {
+			return true
 		}
 	}
 	return false

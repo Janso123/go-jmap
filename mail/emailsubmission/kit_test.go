@@ -12,11 +12,9 @@ import (
 
 func TestEmailSubmissionSetOnSuccessWire(t *testing.T) {
 	m := &emailsubmission.Set{
-		Set: jmap.Set[emailsubmission.EmailSubmission]{
-			Account: "a1",
-			Destroy: []jmap.ID{"s1"},
-		},
-		OnSuccessDestroyEmail: []jmap.ID{"e1"},
+		Account:               "a1",
+		Destroy:               jmap.Some([]jmap.ID{"s1"}),
+		OnSuccessDestroyEmail: jmap.Some([]jmap.ID{"e1"}),
 	}
 	require.Equal(t, "EmailSubmission/set", m.Name())
 	b, err := jsonv2.Marshal(m)
@@ -29,7 +27,7 @@ func TestEmailSubmissionSetOnSuccessWire(t *testing.T) {
 }
 
 func TestEmailSubmissionGetEmbedsKit(t *testing.T) {
-	m := &emailsubmission.Get{Get: jmap.Get[emailsubmission.EmailSubmission]{Account: "a1"}}
+	m := &emailsubmission.Get{Account: "a1"}
 	require.Equal(t, "EmailSubmission/get", m.Name())
 	b, err := jsonv2.Marshal(m)
 	require.NoError(t, err)
@@ -43,5 +41,6 @@ func TestEmailSubmissionGetEmbedsKit(t *testing.T) {
 func TestEmailSubmissionQueryResponseTotalUint64(t *testing.T) {
 	var resp emailsubmission.QueryResponse
 	require.NoError(t, jsonv2.Unmarshal([]byte(`{"accountId":"a1","total":3}`), &resp))
-	require.Equal(t, uint64(3), resp.Total)
+	require.NotNil(t, resp.Total)
+	require.Equal(t, jmap.UnsignedInt(3), *resp.Total)
 }

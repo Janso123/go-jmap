@@ -5,13 +5,12 @@ import (
 
 	jsonv2 "encoding/json/v2"
 
-	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/mail/identity"
 	"github.com/stretchr/testify/require"
 )
 
 func TestIdentityGetEmbedsKit(t *testing.T) {
-	m := &identity.Get{Get: jmap.Get[identity.Identity]{Account: "a1"}}
+	m := &identity.Get{Account: "a1"}
 	require.Equal(t, "Identity/get", m.Name())
 	b, err := jsonv2.Marshal(m)
 	require.NoError(t, err)

@@ -5,13 +5,12 @@ import (
 
 	jsonv2 "encoding/json/v2"
 
-	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/mail/vacationresponse"
 	"github.com/stretchr/testify/require"
 )
 
 func TestVacationResponseGetEmbedsKit(t *testing.T) {
-	m := &vacationresponse.Get{Get: jmap.Get[vacationresponse.VacationResponse]{Account: "a1"}}
+	m := &vacationresponse.Get{Account: "a1"}
 	require.Equal(t, "VacationResponse/get", m.Name())
 	b, err := jsonv2.Marshal(m)
 	require.NoError(t, err)

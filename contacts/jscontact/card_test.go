@@ -1,9 +1,11 @@
 package jscontact
 
 import (
+	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"testing"
 
+	"github.com/Janso123/go-jmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -248,4 +250,128 @@ func TestCardExtraRoundTrip(t *testing.T) {
 	out, err := jsonv2.Marshal(card)
 	require.NoError(t, err)
 	require.JSONEq(t, input, string(out))
+}
+
+func TestMediaBlobIDNotOnlyInExtra(t *testing.T) {
+	t.Parallel()
+	var m Media
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"uri":"https://ex/photo.jpg","blobId":"b1"}`), &m))
+	_, inMediaExtra := m.Extra["blobId"]
+	_, inResourceExtra := m.Resource.Extra["blobId"]
+	require.False(t, inMediaExtra)
+	require.False(t, inResourceExtra)
+	require.Equal(t, jmap.ID("b1"), m.BlobID)
+	b, err := jsonv2.Marshal(&m)
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"blobId":"b1"`)
+}
+
+func TestLinkHasNoBlobID(t *testing.T) {
+	t.Parallel()
+	// Link has no BlobID field. blobId round-trips through the single Extra map.
+	type linkWire struct {
+		Resource
+	}
+	var l Link
+	_ = linkWire(l)
+
+	const input = `{"uri":"https://ex/","blobId":"b2"}`
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &l))
+	raw, ok := l.Extra["blobId"]
+	require.True(t, ok)
+	require.JSONEq(t, `"b2"`, string(raw))
+	out, err := jsonv2.Marshal(&l)
+	require.NoError(t, err)
+	require.JSONEq(t, input, string(out))
+}
+
+func TestSeparatorComponentKeepsEmptyValue(t *testing.T) {
+	t.Parallel()
+	const in = `{"kind":"separator","value":""}`
+	for _, name := range []string{"name", "address"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var out []byte
+			var err error
+			if name == "name" {
+				var c NameComponent
+				require.NoError(t, jsonv2.Unmarshal([]byte(in), &c))
+				out, err = jsonv2.Marshal(&c)
+			} else {
+				var c AddressComponent
+				require.NoError(t, jsonv2.Unmarshal([]byte(in), &c))
+				out, err = jsonv2.Marshal(&c)
+			}
+			require.NoError(t, err)
+			require.Contains(t, string(out), `"value":""`)
+		})
+	}
+}
+
+func TestPartialDateYearZeroKept(t *testing.T) {
+	t.Parallel()
+	const in = `{"year":0,"month":1,"day":1}`
+	var date PartialDate
+	require.NoError(t, jsonv2.Unmarshal([]byte(in), &date))
+	out, err := jsonv2.Marshal(&date)
+	require.NoError(t, err)
+	require.Contains(t, string(out), `"year":0`)
+	require.Contains(t, string(out), `"month":1`)
+	require.Contains(t, string(out), `"day":1`)
+}
+
+func TestAnniversaryEmptyOmitsDate(t *testing.T) {
+	t.Parallel()
+	out, err := jsonv2.Marshal(Anniversary{})
+	require.NoError(t, err)
+	require.NotContains(t, string(out), "date")
+}
+
+func TestAnniversaryDateBothNilOmitsDate(t *testing.T) {
+	t.Parallel()
+	out, err := jsonv2.Marshal(Anniversary{Date: &AnniversaryDate{}})
+	require.NoError(t, err)
+	require.NotContains(t, string(out), "date")
+}
+
+func TestDefaultSeparatorNull(t *testing.T) {
+	t.Parallel()
+	var name Name
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"defaultSeparator":null}`), &name))
+	require.True(t, name.DefaultSeparator.IsNull())
+	out, err := jsonv2.Marshal(&name)
+	require.NoError(t, err)
+	require.Contains(t, string(out), `"defaultSeparator":null`)
+
+	var addr Address
+	require.NoError(t, jsonv2.Unmarshal([]byte(`{"defaultSeparator":null}`), &addr))
+	require.True(t, addr.DefaultSeparator.IsNull())
+	out, err = jsonv2.Marshal(&addr)
+	require.NoError(t, err)
+	require.Contains(t, string(out), `"defaultSeparator":null`)
+}
+
+func TestEmbeddedResourceHasSingleExtra(t *testing.T) {
+	t.Parallel()
+	raw := jsontext.Value(`1`)
+
+	cal := Calendar{
+		Extra: map[string]jsontext.Value{"x": raw}}
+	require.Equal(t, raw, cal.Resource.Extra["x"])
+
+	key := CryptoKey{
+		Extra: map[string]jsontext.Value{"x": raw}}
+	require.Equal(t, raw, key.Resource.Extra["x"])
+
+	dir := Directory{
+		Extra: map[string]jsontext.Value{"x": raw}}
+	require.Equal(t, raw, dir.Resource.Extra["x"])
+
+	link := Link{
+		Extra: map[string]jsontext.Value{"x": raw}}
+	require.Equal(t, raw, link.Resource.Extra["x"])
+
+	media := Media{
+		Extra: map[string]jsontext.Value{"x": raw}}
+	require.Equal(t, raw, media.Resource.Extra["x"])
 }

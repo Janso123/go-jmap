@@ -4,12 +4,13 @@ import (
 	jsonv2 "encoding/json/v2"
 	"testing"
 
+	"github.com/Janso123/go-jmap"
 	"github.com/Janso123/go-jmap/mail/mailbox"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMailboxCreateTopLevelParentNull(t *testing.T) {
-	m := mailbox.Mailbox{Name: "x", ParentID: nil}
+	m := mailbox.Mailbox{Name: "x", ParentID: jmap.Null[jmap.ID]()}
 	b, err := jsonv2.Marshal(m)
 	require.NoError(t, err)
 	require.Contains(t, string(b), `"parentId":null`)

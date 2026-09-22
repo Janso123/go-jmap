@@ -69,5 +69,10 @@ func (s *Session) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return decodeErr
 	}
 
+	for id, acc := range s.Accounts {
+		acc.ID = string(id)
+		s.Accounts[id] = acc
+	}
+
 	return nil
 }

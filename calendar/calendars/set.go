@@ -9,7 +9,7 @@ type Set struct {
 
 	OnDestroyRemoveEvents bool `json:"onDestroyRemoveEvents,omitzero"`
 
-	OnSuccessSetIsDefault jmap.ID `json:"onSuccessSetIsDefault,omitzero"`
+	OnSuccessSetIsDefault jmap.Optional[jmap.ID] `json:"onSuccessSetIsDefault,omitzero"`
 }
 
 // SetResponse is the result of Calendar/set.

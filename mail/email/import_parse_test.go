@@ -26,5 +26,9 @@ func TestEmailImportParseResponsesRegistered(t *testing.T) {
 
 	par, ok := resp.Responses[1].Args.(*email.ParseResponse)
 	require.True(t, ok)
-	require.Equal(t, "hi", par.Parsed[jmap.ID("b1")].Subject)
+	parsed, ok := par.Parsed.Value()
+	require.True(t, ok)
+	subject, ok := parsed[jmap.ID("b1")].Subject.Value()
+	require.True(t, ok)
+	require.Equal(t, "hi", subject)
 }

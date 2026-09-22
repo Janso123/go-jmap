@@ -1,6 +1,34 @@
 package jmap
 
-import "strings"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+var level1Var = regexp.MustCompile(`^\{[A-Za-z0-9_.%-]+\}$`)
+
+// ValidateURITemplateLevel1 rejects any expression other than a single
+// RFC 6570 Level 1 {varname} (no operators, modifiers, or lists).
+func ValidateURITemplateLevel1(tmpl string) error {
+	for i := 0; i < len(tmpl); {
+		open := strings.IndexByte(tmpl[i:], '{')
+		if open < 0 {
+			return nil
+		}
+		open += i
+		close := strings.IndexByte(tmpl[open:], '}')
+		if close < 0 {
+			return fmt.Errorf("jmap: unterminated expression in %q", tmpl)
+		}
+		close += open
+		if !level1Var.MatchString(tmpl[open : close+1]) {
+			return fmt.Errorf("jmap: %q is not an RFC 6570 Level 1 expression", tmpl[open:close+1])
+		}
+		i = close + 1
+	}
+	return nil
+}
 
 // ExpandURITemplateLevel1 substitutes {name} variables using RFC 6570 §3.2.2
 // simple string expansion: every octet outside the unreserved set

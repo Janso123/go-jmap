@@ -1,7 +1,7 @@
 package participantidentity
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -15,11 +15,11 @@ func TestSetInvokeUsesCalendarsCapabilityAndExtras(t *testing.T) {
 
 	id := req.Invoke(&Set{
 		Account:               "u1",
-		OnSuccessSetIsDefault: "#create-pi1",
+		OnSuccessSetIsDefault: jmap.Some(jmap.ID("#create-pi1")),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["ParticipantIdentity/set",{"accountId":"u1","onSuccessSetIsDefault":"#create-pi1"},"0"]]}`,
@@ -29,14 +29,14 @@ func TestSetInvokeUsesCalendarsCapabilityAndExtras(t *testing.T) {
 func TestSetJSON(t *testing.T) {
 	set := &Set{
 		Account: "u1",
-		Update: map[jmap.ID]jmap.Patch{
+		Update: jmap.Some(map[jmap.ID]jmap.Patch{
 			"pi1": {
 				"name": nil,
 			},
-		},
+		}),
 	}
 
-	data, err := json.Marshal(set)
+	data, err := jsonv2.Marshal(set)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"accountId":"u1","update":{"pi1":{"name":null}}}`,

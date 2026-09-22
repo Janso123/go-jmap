@@ -7,9 +7,9 @@ import "github.com/Janso123/go-jmap"
 type FilterCondition struct {
 	jmap.FilterBase `json:"-"`
 
-	After *jmap.UTCDate `json:"after,omitzero"`
+	After jmap.Optional[jmap.UTCDate] `json:"after,omitzero"`
 
-	Before *jmap.UTCDate `json:"before,omitzero"`
+	Before jmap.Optional[jmap.UTCDate] `json:"before,omitzero"`
 
 	ObjectType string `json:"objectType,omitzero"`
 

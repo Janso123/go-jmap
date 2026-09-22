@@ -35,12 +35,12 @@ func init() {
 // Capability describes the JMAP Calendars capability.
 // The same type is also used for the empty session capability object.
 type Capability struct {
-	MaxCalendarsPerEvent     *uint64                `json:"maxCalendarsPerEvent,omitzero"`
-	MinDateTime              jscalendar.UTCDateTime `json:"minDateTime,omitzero"`
-	MaxDateTime              jscalendar.UTCDateTime `json:"maxDateTime,omitzero"`
-	MaxExpandedQueryDuration jscalendar.Duration    `json:"maxExpandedQueryDuration,omitzero"`
-	MaxParticipantsPerEvent  *uint64                `json:"maxParticipantsPerEvent,omitzero"`
-	MayCreateCalendar        *bool                  `json:"mayCreateCalendar,omitzero"`
+	MaxCalendarsPerEvent     jmap.Optional[jmap.UnsignedInt] `json:"maxCalendarsPerEvent,omitzero"`
+	MinDateTime              jscalendar.UTCDateTime          `json:"minDateTime,omitzero"`
+	MaxDateTime              jscalendar.UTCDateTime          `json:"maxDateTime,omitzero"`
+	MaxExpandedQueryDuration jscalendar.Duration             `json:"maxExpandedQueryDuration,omitzero"`
+	MaxParticipantsPerEvent  jmap.Optional[jmap.UnsignedInt] `json:"maxParticipantsPerEvent,omitzero"`
+	MayCreateCalendar        *bool                           `json:"mayCreateCalendar,omitzero"`
 }
 
 func (c *Capability) URI() jmap.URI { return URI }

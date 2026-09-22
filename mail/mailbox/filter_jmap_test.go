@@ -19,7 +19,7 @@ func TestJmapAndMailboxParent(t *testing.T) {
 
 func TestMailboxFilterExplicitFalseAndNull(t *testing.T) {
 	t.Parallel()
-	b, err := jsonv2.Marshal(&mailbox.FilterCondition{IsSubscribed: jmap.Bool(false)})
+	b, err := jsonv2.Marshal(&mailbox.FilterCondition{IsSubscribed: new(false)})
 	require.NoError(t, err)
 	require.JSONEq(t, `{"isSubscribed":false}`, string(b))
 
@@ -31,7 +31,7 @@ func TestMailboxFilterExplicitFalseAndNull(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, `{"role":null}`, string(b))
 
-	b, err = jsonv2.Marshal(&mailbox.FilterCondition{HasAnyRole: jmap.Bool(false)})
+	b, err = jsonv2.Marshal(&mailbox.FilterCondition{HasAnyRole: new(false)})
 	require.NoError(t, err)
 	require.JSONEq(t, `{"hasAnyRole":false}`, string(b))
 }

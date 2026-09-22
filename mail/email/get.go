@@ -15,11 +15,14 @@ type Get struct {
 
 	FetchAllBodyValues bool `json:"fetchAllBodyValues,omitzero"`
 
-	MaxBodyValueBytes uint64 `json:"maxBodyValueBytes,omitzero"`
+	// MaxBodyValueBytes is optional. Nil omits the field (server default).
+	// A pointer to 0 is sent so the server fetches zero bytes (RFC 8621 §4.2).
+	MaxBodyValueBytes *jmap.UnsignedInt `json:"maxBodyValueBytes,omitzero"`
 }
 
 func (g *Get) Requires() []jmap.URI {
-	return mailRequires(propertiesNeedSMIME(g.Properties))
+	props, _ := g.Properties.Value()
+	return mailRequires(propertiesNeedSMIME(props))
 }
 
 // GetResponse is the result of Email/get.

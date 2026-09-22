@@ -42,15 +42,16 @@ func init() {
 }
 
 type Mail struct {
-	MaxMailboxesPerEmail       *uint64 `json:"maxMailboxesPerEmail,omitzero"`
-	MaxMailboxDepth            *uint64 `json:"maxMailboxDepth,omitzero"`
-	MaxSizeMailboxName         uint64  `json:"maxSizeMailboxName,omitzero"`
-	MaxSizeAttachmentsPerEmail uint64  `json:"maxSizeAttachmentsPerEmail,omitzero"`
+	// MaxMailboxesPerEmail and MaxMailboxDepth are JSON null for no limit.
+	MaxMailboxesPerEmail       jmap.Optional[jmap.UnsignedInt] `json:"maxMailboxesPerEmail,omitzero"`
+	MaxMailboxDepth            jmap.Optional[jmap.UnsignedInt] `json:"maxMailboxDepth,omitzero"`
+	MaxSizeMailboxName         jmap.UnsignedInt                `json:"maxSizeMailboxName"`
+	MaxSizeAttachmentsPerEmail jmap.UnsignedInt                `json:"maxSizeAttachmentsPerEmail"`
 
 	// A list of all values the server supports for sorting
-	EmailQuerySortOptions []string `json:"emailQuerySortOptions,omitzero"`
+	EmailQuerySortOptions []string `json:"emailQuerySortOptions"`
 
-	MayCreateTopLevelMailbox bool `json:"mayCreateTopLevelMailbox,omitzero"`
+	MayCreateTopLevelMailbox bool `json:"mayCreateTopLevelMailbox"`
 }
 
 func (m *Mail) URI() jmap.URI { return URI }
@@ -59,13 +60,15 @@ func (m *Mail) New() jmap.Capability { return &Mail{} }
 
 // An Email address
 type Address struct {
-	Name  string `json:"name,omitzero"`
-	Email string `json:"email"`
+	// Name is JSON null when the address has no display name.
+	Name  jmap.Optional[string] `json:"name,omitzero"`
+	Email string                `json:"email"`
 }
 
 func (a *Address) String() string {
-	if a.Name == "" {
+	name, ok := a.Name.Value()
+	if !ok || name == "" {
 		return a.Email
 	}
-	return fmt.Sprintf("%s <%s>", a.Name, a.Email)
+	return fmt.Sprintf("%s <%s>", name, a.Email)
 }

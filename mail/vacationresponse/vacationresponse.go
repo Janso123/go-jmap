@@ -21,22 +21,24 @@ func (m *Capability) New() jmap.Capability { return &Capability{} }
 // Automatic reply when a message is delivered to the mail store
 // https://www.rfc-editor.org/rfc/rfc8621.html#section-8
 type VacationResponse struct {
-	ID string `json:"id,omitzero"`
+	ID jmap.ID `json:"id,omitzero"`
 
 	IsEnabled *bool `json:"isEnabled,omitzero"`
 
-	FromDate *jmap.UTCDate `json:"fromDate,omitzero"`
+	FromDate jmap.Optional[jmap.UTCDate] `json:"fromDate,omitzero"`
 
-	ToDate *jmap.UTCDate `json:"toDate,omitzero"`
+	ToDate jmap.Optional[jmap.UTCDate] `json:"toDate,omitzero"`
 
-	Subject *string `json:"subject,omitzero"`
+	Subject jmap.Optional[string] `json:"subject,omitzero"`
 
-	TextBody *string `json:"textBody,omitzero"`
+	TextBody jmap.Optional[string] `json:"textBody,omitzero"`
 
-	HTMLBody *string `json:"htmlBody,omitzero"`
+	HTMLBody jmap.Optional[string] `json:"htmlBody,omitzero"`
 }
 
 func (VacationResponse) JMAPType() string { return "VacationResponse" }
+
+func (VacationResponse) JMAPCreatable() {}
 
 func (VacationResponse) Requires() []jmap.URI {
 	return []jmap.URI{URI}

@@ -1,7 +1,7 @@
 package addressbook
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -15,12 +15,12 @@ func TestGetInvoke(t *testing.T) {
 
 	id := req.Invoke(&Get{
 		Account:    "u1",
-		IDs:        []jmap.ID{"ab1"},
-		Properties: []string{"name", "myRights"},
+		IDs:        jmap.Some([]jmap.ID{"ab1"}),
+		Properties: jmap.Some([]string{"name", "myRights"}),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["AddressBook/get",{"accountId":"u1","ids":["ab1"],"properties":["name","myRights"]},"0"]]}`,
@@ -45,7 +45,7 @@ func TestGetInvokeWithResultReferences(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["AddressBook/get",{"accountId":"u1","#ids":{"resultOf":"c1","name":"AddressBook/changes","path":"/created"},"#properties":{"resultOf":"c2","name":"Core/echo","path":"/properties"}},"0"]]}`,

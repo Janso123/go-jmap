@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -45,13 +47,53 @@ type Client struct {
 	// previous Session existed. old is the Session before refresh; new is
 	// the Session after Authenticate.
 	OnSessionChange func(old, new *Session)
+
+	trustedHosts []string
+	policyClient *http.Client
+	boundClient  *http.Client
+	userRedirect func(*http.Request, []*http.Request) error
+
+	// maxResponseBytes, when positive, replaces the default JSON response cap.
+	// See WithMaxResponseBytes.
+	maxResponseBytes int64
 }
 
 func (c *Client) httpClient() *http.Client {
-	if c.HttpClient == nil {
-		return http.DefaultClient
+	c.Lock()
+	defer c.Unlock()
+	hc := c.HttpClient
+	if hc == nil || hc == http.DefaultClient {
+		hc = &http.Client{}
+		c.HttpClient = hc
 	}
-	return c.HttpClient
+	if c.policyClient != hc {
+		if c.boundClient != hc {
+			c.userRedirect = hc.CheckRedirect
+			c.boundClient = hc
+		}
+		user := c.userRedirect
+		hosts := append([]string(nil), c.trustedHosts...)
+		hc.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if err := enforceRedirectOrigin(req, via, hosts); err != nil {
+				return err
+			}
+			// Go rewrites 301/302/303 POST to GET before calling CheckRedirect.
+			// 307/308 keep the method and require a replayable body.
+			prev := via[len(via)-1]
+			if prev.Method != req.Method {
+				return fmt.Errorf("jmap: refusing redirect from %s to %s", prev.Method, req.Method)
+			}
+			if req.Method != http.MethodGet && req.Method != http.MethodHead && prev.GetBody == nil {
+				return fmt.Errorf("jmap: refusing %s redirect without a replayable body", req.Method)
+			}
+			if user != nil {
+				return user(req, via)
+			}
+			return nil
+		}
+		c.policyClient = hc
+	}
+	return hc
 }
 
 // HTTPClient returns the HTTP client used for JMAP requests, or
@@ -95,12 +137,15 @@ func (c *Client) applyToken(tok *oauth2.Token) {
 		base:   unwrapOriginAuth(hc.Transport),
 		header: authHeader(tok),
 	}
-	t.allow(hostOf(c.SessionEndpoint))
+	t.allow(originOf(c.SessionEndpoint))
 	hc.Transport = t
 	c.HttpClient = hc
 }
 
-func (c *Client) allowAuthHosts(s *Session) {
+// allowAuthOrigins adds Session resource URLs to the credential allow-set only
+// when they share the SessionEndpoint origin. URLs from a Session object must
+// not introduce new origins (RFC 8620 §2 session GET is authenticated).
+func (c *Client) allowAuthOrigins(s *Session) {
 	if c.HttpClient == nil {
 		return
 	}
@@ -108,14 +153,90 @@ func (c *Client) allowAuthHosts(s *Session) {
 	if !ok {
 		return
 	}
-	t.allow(hostOf(c.SessionEndpoint))
-	if s == nil {
+	sessOrigin := originOf(c.SessionEndpoint)
+	t.allow(sessOrigin)
+	if s == nil || sessOrigin == "" {
 		return
 	}
-	t.allow(hostOf(s.APIURL))
-	t.allow(hostOf(s.UploadURL))
-	t.allow(hostOf(s.DownloadURL))
-	t.allow(hostOf(s.EventSourceURL))
+	for _, raw := range []string{s.APIURL, s.UploadURL, s.DownloadURL, s.EventSourceURL} {
+		if originOf(raw) == sessOrigin {
+			t.allow(originOf(raw))
+		}
+	}
+}
+
+func sessionResponseOriginOK(endpoint string, resp *http.Response) error {
+	return ResponseOriginOK(endpoint, resp)
+}
+
+// ResponseOriginOK reports whether the final request URL of resp shares the
+// origin of expectedURL (scheme+host+port, default ports normalized).
+func ResponseOriginOK(expectedURL string, resp *http.Response) error {
+	return responseOriginOK(expectedURL, resp)
+}
+
+func responseOriginOK(expectedURL string, resp *http.Response) error {
+	want := originOf(expectedURL)
+	if want == "" {
+		return fmt.Errorf("jmap: invalid expected origin")
+	}
+	if resp == nil || resp.Request == nil {
+		return fmt.Errorf("jmap: response missing request URL")
+	}
+	got := originOfURL(resp.Request.URL)
+	if got != want {
+		return fmt.Errorf("jmap: refusing response from origin %s (expected %s)", got, want)
+	}
+	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func sessionEndpointSchemeOK(endpoint string) error {
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("jmap: invalid session endpoint")
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "https":
+		return nil
+	case "http":
+		if isLoopbackHost(u.Hostname()) {
+			return nil
+		}
+		return fmt.Errorf("jmap: session endpoint must use https (RFC 8620 §8.1)")
+	default:
+		return fmt.Errorf("jmap: session endpoint must use https (RFC 8620 §8.1)")
+	}
+}
+
+func sessionResourceOriginsOK(endpoint string, s *Session) error {
+	if s == nil {
+		return nil
+	}
+	want := originOf(endpoint)
+	if want == "" {
+		return fmt.Errorf("jmap: invalid session endpoint origin")
+	}
+	for _, raw := range []string{s.APIURL, s.UploadURL, s.DownloadURL, s.EventSourceURL} {
+		if raw == "" {
+			continue
+		}
+		got := originOf(raw)
+		if got == "" {
+			continue
+		}
+		if got != want {
+			return fmt.Errorf("jmap: refusing session resource origin %s (session endpoint origin %s)", got, want)
+		}
+	}
+	return nil
 }
 
 func resolveRef(base *url.URL, ref string) string {
@@ -126,11 +247,17 @@ func resolveRef(base *url.URL, ref string) string {
 	if err != nil {
 		return ref
 	}
-	return base.ResolveReference(u).String()
+	if u.IsAbs() {
+		return ref
+	}
+	return strings.NewReplacer("%7B", "{", "%7D", "}").Replace(base.ResolveReference(u).String())
 }
 
-func (c *Client) resolveSessionURLs(s *Session) {
-	base, err := url.Parse(c.SessionEndpoint)
+func resolveSessionURLs(endpoint string, s *Session) {
+	if s == nil {
+		return
+	}
+	base, err := url.Parse(endpoint)
 	if err != nil {
 		return
 	}
@@ -138,6 +265,29 @@ func (c *Client) resolveSessionURLs(s *Session) {
 	s.UploadURL = resolveRef(base, s.UploadURL)
 	s.DownloadURL = resolveRef(base, s.DownloadURL)
 	s.EventSourceURL = resolveRef(base, s.EventSourceURL)
+}
+
+func checkSession(endpoint string, s *Session) error {
+	if s == nil {
+		return nil
+	}
+	if err := validateSessionURITemplates(s); err != nil {
+		return err
+	}
+	resolveSessionURLs(endpoint, s)
+	if err := validateSessionURITemplates(s); err != nil {
+		return err
+	}
+	return sessionResourceOriginsOK(endpoint, s)
+}
+
+func validateSessionURITemplates(s *Session) error {
+	for _, tmpl := range []string{s.UploadURL, s.DownloadURL, s.EventSourceURL} {
+		if err := ValidateURITemplateLevel1(tmpl); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // WithBasicAuth configures HttpClient to send HTTP Basic auth via oauth2.Transport.
@@ -160,6 +310,8 @@ func (c *Client) WithAccessToken(token string) *Client {
 
 // PrimaryAccount returns the primary account ID for the given capability URI.
 func (c *Client) PrimaryAccount(uri URI) (ID, error) {
+	c.Lock()
+	defer c.Unlock()
 	if c.Session == nil {
 		return "", fmt.Errorf("session not loaded")
 	}
@@ -183,6 +335,9 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	}
 	endpoint := c.SessionEndpoint
 	c.Unlock()
+	if err := sessionEndpointSchemeOK(endpoint); err != nil {
+		return err
+	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	if err != nil {
@@ -200,8 +355,11 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	if resp.StatusCode != 200 {
 		return decodeHttpError(resp)
 	}
+	if err := sessionResponseOriginOK(endpoint, resp); err != nil {
+		return err
+	}
 
-	data, err := readJSONBody(resp.Body)
+	data, err := c.readJSONBody(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -211,12 +369,14 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("jmap: decoding session: %w", err)
 	}
-	c.resolveSessionURLs(s)
+	if err := checkSession(endpoint, s); err != nil {
+		return err
+	}
 
 	c.Lock()
 	c.Session = s
 	c.sessionStale = false
-	c.allowAuthHosts(s)
+	c.allowAuthOrigins(s)
 	c.Unlock()
 
 	return nil
@@ -332,8 +492,11 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 	if httpResp.StatusCode != 200 {
 		return nil, decodeHttpError(httpResp)
 	}
+	if err := responseOriginOK(apiURL, httpResp); err != nil {
+		return nil, err
+	}
 
-	data, err := readJSONBody(httpResp.Body)
+	data, err := c.readJSONBody(httpResp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -407,8 +570,11 @@ func (c *Client) Upload(ctx context.Context, accountID ID, blob io.Reader, conte
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, decodeHttpError(resp)
 	}
+	if err := responseOriginOK(uploadURL, resp); err != nil {
+		return nil, err
+	}
 
-	data, err := readJSONBody(resp.Body)
+	data, err := c.readJSONBody(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -433,15 +599,64 @@ func expandDownloadURL(tmpl, accountID, blobID, typ, name string) string {
 
 const maxJSONBody = 32 << 20
 
-func readJSONBody(r io.Reader) ([]byte, error) {
-	data, err := io.ReadAll(io.LimitReader(r, maxJSONBody+1))
+func (c *Client) readJSONBody(r io.Reader) ([]byte, error) {
+	limit := c.responseLimit()
+	data, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(data) > maxJSONBody {
-		return nil, fmt.Errorf("jmap: response body exceeds %d bytes", maxJSONBody)
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("jmap: response body exceeds %d bytes", limit)
 	}
 	return data, nil
+}
+
+// responseLimit is max(32<<20, session maxSizeRequest) unless
+// WithMaxResponseBytes set a positive cap. maxSizeRequest is a heuristic
+// (RFC 8620 §2 defines the value for requests).
+func (c *Client) responseLimit() int64 {
+	if c == nil {
+		return maxJSONBody
+	}
+	c.Lock()
+	defer c.Unlock()
+	if c.maxResponseBytes > 0 {
+		return c.maxResponseBytes
+	}
+	limit := int64(maxJSONBody)
+	if n, ok := sessionMaxSizeRequest(c.Session); ok && n > limit {
+		limit = n
+	}
+	return limit
+}
+
+// sessionMaxSizeRequest reads Session.Capabilities[CoreURI].(*core.Core).MaxSizeRequest
+// when that capability is present. Package jmap cannot import core (cycle).
+func sessionMaxSizeRequest(s *Session) (int64, bool) {
+	if s == nil || s.Capabilities == nil {
+		return 0, false
+	}
+	cap, ok := s.Capabilities[CoreURI]
+	if !ok || cap == nil {
+		return 0, false
+	}
+	v := reflect.ValueOf(cap)
+	if v.Kind() != reflect.Pointer || v.IsNil() {
+		return 0, false
+	}
+	elem := v.Elem()
+	if elem.Kind() != reflect.Struct {
+		return 0, false
+	}
+	t := elem.Type()
+	if t.Name() != "Core" || !strings.HasSuffix(t.PkgPath(), "/core") {
+		return 0, false
+	}
+	f := elem.FieldByName("MaxSizeRequest")
+	if !f.IsValid() || !f.CanUint() {
+		return 0, false
+	}
+	return int64(f.Uint()), true
 }
 
 // Download downloads binary data by its Blob ID from the server.
@@ -487,6 +702,10 @@ func (c *Client) Download(ctx context.Context, accountID ID, blobID ID, opts Dow
 	if resp.StatusCode != 200 {
 		defer resp.Body.Close()
 		return nil, decodeHttpError(resp)
+	}
+	if err := responseOriginOK(tgtUrl, resp); err != nil {
+		resp.Body.Close()
+		return nil, err
 	}
 
 	return resp.Body, nil

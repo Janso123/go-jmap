@@ -43,6 +43,19 @@ type Options struct {
 	// (draft-ietf-jmap-calendars §6.4). Unknown other @types still go to
 	// OnFrameError.
 	OnCalendarAlert func(*calendar.CalendarAlert)
+
+	// ReadLimit bounds a single incoming frame in bytes. 0 means 32 MiB.
+	// coder/websocket defaults to 32 KiB, which is below a normal JMAP Response.
+	ReadLimit int64
+
+	// WriteTimeout bounds each client frame write. 0 means only the caller
+	// context applies.
+	WriteTimeout time.Duration
+
+	// AllowForeignOrigin permits a WebSocket URL whose HTTP-equivalent origin
+	// differs from the session endpoint origin. Cleartext ws:// is still
+	// rejected unless the host is loopback.
+	AllowForeignOrigin bool
 }
 
 // ReconnectOptions controls auto-reconnect backoff and callbacks.

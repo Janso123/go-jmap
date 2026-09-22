@@ -1,7 +1,7 @@
 package calendareventnotification
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 	"time"
 
@@ -17,11 +17,11 @@ func TestChangesInvoke(t *testing.T) {
 	id := req.Invoke(&Changes{
 		Account:    "u1",
 		SinceState: "s1",
-		MaxChanges: 25,
+		MaxChanges: jmap.Uint64Ptr(25),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/changes",{"accountId":"u1","sinceState":"s1","maxChanges":25},"0"]]}`,
@@ -41,7 +41,7 @@ func TestSetInvoke(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/set",{"accountId":"u1","destroy":["cn1"]},"0"]]}`,
@@ -52,6 +52,19 @@ func TestSetRequiresCalendarsCapability(t *testing.T) {
 	assert.Equal(t, []jmap.URI{calendar.URI}, (&Set{}).Requires())
 }
 
+func TestSetDestroyOnlyOmitsCreateUpdate(t *testing.T) {
+	t.Parallel()
+	m := &Set{
+		Account: "u1",
+		Destroy: []jmap.ID{"cn1"},
+	}
+	b, err := jsonv2.Marshal(m)
+	require.NoError(t, err)
+	require.NotContains(t, string(b), `"create"`)
+	require.NotContains(t, string(b), `"update"`)
+	require.JSONEq(t, `{"accountId":"u1","destroy":["cn1"]}`, string(b))
+}
+
 func TestQueryInvoke(t *testing.T) {
 	req := &jmap.Request{}
 	after := jmap.UTCDate(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
@@ -59,7 +72,7 @@ func TestQueryInvoke(t *testing.T) {
 	id := req.Invoke(&Query{
 		Account: "u1",
 		Filter: &FilterCondition{
-			After: &after,
+			After: jmap.Some(after),
 			Type:  TypeUpdated,
 		},
 		Sort: []*jmap.Comparator{
@@ -69,10 +82,10 @@ func TestQueryInvoke(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/query",{"accountId":"u1","limit":10,"filter":{"after":"2026-09-01T00:00:00Z","type":"updated"},"sort":[{"property":"created","isAscending":false}]},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/query",{"accountId":"u1","limit":10,"filter":{"after":"2026-09-01T00:00:00Z","type":"updated"},"sort":[{"property":"created"}]},"0"]]}`,
 		string(data))
 }
 
@@ -88,14 +101,14 @@ func TestQueryChangesInvoke(t *testing.T) {
 		Filter:          &FilterCondition{Type: TypeCreated},
 		Sort:            []*jmap.Comparator{{Property: "created"}},
 		SinceQueryState: "q1",
-		MaxChanges:      10,
+		MaxChanges:      jmap.Uint64Ptr(10),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":10,"filter":{"type":"created"},"sort":[{"property":"created","isAscending":false}]},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":10,"filter":{"type":"created"},"sort":[{"property":"created"}]},"0"]]}`,
 		string(data))
 }
 

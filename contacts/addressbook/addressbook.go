@@ -11,8 +11,6 @@ func init() {
 			jmap.MethodChanges |
 			jmap.MethodSet,
 	)
-	// AddressBook/changes includes updatedProperties; override kit factory.
-	jmap.RegisterMethod("AddressBook/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 // AddressBook is a named collection of ContactCards.
@@ -22,30 +20,33 @@ type AddressBook struct {
 
 	Name string `json:"name,omitzero"`
 
-	Description string `json:"description,omitzero"`
+	Description jmap.Optional[string] `json:"description,omitzero"`
 
 	SortOrder uint64 `json:"sortOrder,omitzero"`
 
-	IsDefault bool `json:"isDefault,omitzero"`
+	IsDefault *bool `json:"isDefault,omitzero"`
 
 	IsSubscribed *bool `json:"isSubscribed,omitzero"`
 
-	ShareWith map[jmap.ID]*Rights `json:"shareWith,omitzero"`
+	ShareWith jmap.Optional[map[jmap.ID]*Rights] `json:"shareWith,omitzero"`
 
 	MyRights *Rights `json:"myRights,omitzero"`
 }
 
 func (AddressBook) JMAPType() string { return "AddressBook" }
 
+func (AddressBook) JMAPCreatable() {}
+
 func (AddressBook) Requires() []jmap.URI { return []jmap.URI{contacts.URI} }
 
 // Rights is the set of permissions the user has on an AddressBook.
+// Bools are bare so false stays on the wire.
 type Rights struct {
-	MayRead bool `json:"mayRead,omitzero"`
+	MayRead bool `json:"mayRead"`
 
-	MayWrite bool `json:"mayWrite,omitzero"`
+	MayWrite bool `json:"mayWrite"`
 
-	MayShare bool `json:"mayShare,omitzero"`
+	MayShare bool `json:"mayShare"`
 
-	MayDelete bool `json:"mayDelete,omitzero"`
+	MayDelete bool `json:"mayDelete"`
 }

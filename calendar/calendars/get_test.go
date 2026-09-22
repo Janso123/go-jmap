@@ -1,7 +1,7 @@
 package calendars
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -15,12 +15,12 @@ func TestGetInvoke(t *testing.T) {
 
 	id := req.Invoke(&Get{
 		Account:    "u1",
-		IDs:        []jmap.ID{"cal1"},
-		Properties: []string{"name", "myRights"},
+		IDs:        jmap.Some([]jmap.ID{"cal1"}),
+		Properties: jmap.Some([]string{"name", "myRights"}),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["Calendar/get",{"accountId":"u1","ids":["cal1"],"properties":["name","myRights"]},"0"]]}`,
@@ -45,7 +45,7 @@ func TestGetInvokeWithResultReferences(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["Calendar/get",{"accountId":"u1","#ids":{"resultOf":"c1","name":"Calendar/changes","path":"/created"},"#properties":{"resultOf":"c2","name":"Core/echo","path":"/properties"}},"0"]]}`,

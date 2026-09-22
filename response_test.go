@@ -1,7 +1,7 @@
 package jmap
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +13,7 @@ func TestResponseUnmarshal(t *testing.T) {
 	data := []byte(`{"sessionState": "state","methodResponses":[["Test/method",{"Hello":"world"},"0"]]}`)
 
 	resp := &Response{}
-	err := json.Unmarshal(data, resp)
+	err := jsonv2.Unmarshal(data, resp)
 	assert.NoError(err)
 	assert.Equal("state", resp.SessionState)
 	assert.Equal(1, len(resp.Responses))
@@ -43,7 +43,7 @@ func TestResponseMarshal(t *testing.T) {
 			},
 		},
 	}
-	data, err := json.Marshal(resp)
+	data, err := jsonv2.Marshal(resp)
 	assert.NoError(err)
 	expected := `{"methodResponses":[["Test/method",{"Hello":"world"},"0"]],"sessionState":"state"}`
 	assert.Equal(expected, string(data))

@@ -10,9 +10,9 @@ import (
 type Get struct {
 	jmap.Get[CalendarEvent]
 
-	RecurrenceOverridesBefore *jscalendar.UTCDateTime `json:"recurrenceOverridesBefore,omitzero"`
+	RecurrenceOverridesBefore jmap.Optional[jscalendar.UTCDateTime] `json:"recurrenceOverridesBefore,omitzero"`
 
-	RecurrenceOverridesAfter *jscalendar.UTCDateTime `json:"recurrenceOverridesAfter,omitzero"`
+	RecurrenceOverridesAfter jmap.Optional[jscalendar.UTCDateTime] `json:"recurrenceOverridesAfter,omitzero"`
 
 	ReduceParticipants bool `json:"reduceParticipants,omitzero"`
 

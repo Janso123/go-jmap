@@ -80,12 +80,18 @@ func Example() {
 			// retrieved
 			for _, mbox := range r.List {
 				fmt.Printf("Mailbox name: %s", mbox.Name)
-				fmt.Printf("Total email: %d", mbox.TotalEmails)
-				fmt.Printf("Unread email: %d", mbox.UnreadEmails)
+				if mbox.TotalEmails != nil {
+					fmt.Printf("Total email: %d", *mbox.TotalEmails)
+				}
+				if mbox.UnreadEmails != nil {
+					fmt.Printf("Unread email: %d", *mbox.UnreadEmails)
+				}
 			}
 		case *email.GetResponse:
 			for _, eml := range r.List {
-				fmt.Printf("Email subject: %s", eml.Subject)
+				if subject, ok := eml.Subject.Value(); ok {
+					fmt.Printf("Email subject: %s", subject)
+				}
 			}
 		}
 		// There is a response in here to the Email/changes call, but we
@@ -133,7 +139,7 @@ func Example_websocket() {
 	conn.SetHandler(func(change *jmap.StateChange) {
 		// handle push
 	})
-	_ = conn.EnablePush(nil, "") // all data types
+	_ = conn.EnablePush(ctx, nil, "") // all data types
 
 	req := &jmap.Request{}
 	acct, err := client.PrimaryAccount(mail.URI)

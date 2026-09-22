@@ -13,7 +13,7 @@ func TestEmailHeaderURLsEmbed(t *testing.T) {
 	raw := `{"id":"e1","header:List-Unsubscribe:asURLs":["https://ex/unsub"]}`
 	var e email.Email
 	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &e))
-	urls, ok := e.HeaderURLs("List-Unsubscribe")
+	urls, ok := e.HeaderURLs("List-Unsubscribe").Value()
 	require.True(t, ok)
 	require.Equal(t, []string{"https://ex/unsub"}, urls)
 }
@@ -41,28 +41,30 @@ func TestEmailHeaderFormsEmbed(t *testing.T) {
 	var e email.Email
 	require.NoError(t, jsonv2.Unmarshal([]byte(raw), &e))
 
-	subj, ok := e.HeaderText("Subject")
+	subj, ok := e.HeaderText("Subject").Value()
 	require.True(t, ok)
 	require.Equal(t, "Hello", subj)
 
-	from, ok := e.HeaderAddresses("From")
+	from, ok := e.HeaderAddresses("From").Value()
 	require.True(t, ok)
 	require.Equal(t, "ada@ex", from[0].Email)
 
-	groups, ok := e.HeaderGroupedAddresses("To")
+	groups, ok := e.HeaderGroupedAddresses("To").Value()
 	require.True(t, ok)
-	require.Equal(t, "Team", groups[0].Name)
+	groupName, ok := groups[0].Name.Value()
+	require.True(t, ok)
+	require.Equal(t, "Team", groupName)
 	require.Equal(t, "a@ex", groups[0].Addresses[0].Email)
 
-	dt, ok := e.HeaderDate("Date")
+	dt, ok := e.HeaderDate("Date").Value()
 	require.True(t, ok)
 	require.True(t, dt.UTC().Equal(time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC)))
 
-	ids, ok := e.HeaderMessageIDs("Message-ID")
+	ids, ok := e.HeaderMessageIDs("Message-ID").Value()
 	require.True(t, ok)
 	require.Equal(t, []string{"<id@ex>"}, ids)
 
-	urls, ok := e.HeaderURLs("List-Post")
+	urls, ok := e.HeaderURLs("List-Post").Value()
 	require.True(t, ok)
 	require.Equal(t, []string{"mailto:list@ex"}, urls)
 }

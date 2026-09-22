@@ -1,6 +1,9 @@
 package jmap
 
-import "encoding/json"
+import (
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+)
 
 // An account is a collection of data the authenticated user has access to
 //
@@ -22,14 +25,18 @@ type Account struct {
 	Capabilities map[URI]Capability `json:"-"`
 
 	// The raw JSON of accountCapabilities
-	RawCapabilities map[URI]json.RawMessage `json:"accountCapabilities"`
+	RawCapabilities map[URI]jsontext.Value `json:"accountCapabilities"`
 }
 
 type account Account
 
 func (a *Account) UnmarshalJSON(data []byte) error {
+	return jsonv2.Unmarshal(data, a)
+}
+
+func (a *Account) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	raw := (*account)(a)
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := jsonv2.UnmarshalDecode(dec, &raw); err != nil {
 		return err
 	}
 
@@ -44,7 +51,7 @@ func (a *Account) UnmarshalJSON(data []byte) error {
 			return
 		}
 		newCap := cap.New()
-		if err := json.Unmarshal(rawCap, newCap); err != nil {
+		if err := jsonv2.Unmarshal(rawCap, newCap); err != nil {
 			decodeErr = err
 			return
 		}

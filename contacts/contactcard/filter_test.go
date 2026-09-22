@@ -1,7 +1,7 @@
 package contactcard
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +13,7 @@ func TestFilterConditionJSONNameGiven(t *testing.T) {
 		NameGiven: "Ada",
 	}
 
-	data, err := json.Marshal(filter)
+	data, err := jsonv2.Marshal(filter)
 	require.NoError(t, err)
 	assert.Equal(t, `{"name/given":"Ada"}`, string(data))
 }

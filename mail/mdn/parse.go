@@ -19,11 +19,11 @@ func (m *Parse) Requires() []jmap.URI { return []jmap.URI{URI} }
 type ParseResponse struct {
 	Account jmap.ID `json:"accountId,omitzero"`
 
-	Parsed map[jmap.ID]*MDN `json:"parsed,omitzero"`
+	Parsed jmap.Optional[map[jmap.ID]*MDN] `json:"parsed,omitzero"`
 
-	NotParsable []jmap.ID `json:"notParsable,omitzero"`
+	NotParsable jmap.Optional[[]jmap.ID] `json:"notParsable,omitzero"`
 
-	NotFound []jmap.ID `json:"notFound,omitzero"`
+	NotFound jmap.Optional[[]jmap.ID] `json:"notFound,omitzero"`
 }
 
 func newParseResponse() jmap.MethodResponse { return &ParseResponse{} }

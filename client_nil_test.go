@@ -14,7 +14,7 @@ import (
 func TestNilHTTPClientDoesNotPanic(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		io.WriteString(w, `{"capabilities":{},"apiUrl":"http://x","downloadUrl":"http://x","uploadUrl":"http://x","eventSourceUrl":"http://x","state":"s"}`)
+		io.WriteString(w, `{"capabilities":{},"apiUrl":"/api","downloadUrl":"/d","uploadUrl":"/u","eventSourceUrl":"/e","state":"s"}`)
 	}))
 	defer srv.Close()
 	c := &jmap.Client{SessionEndpoint: srv.URL} // HttpClient nil
@@ -50,7 +50,7 @@ func TestTrustedHosts(t *testing.T) {
 			http.Redirect(w, r, "http://evil.example/session", http.StatusFound)
 		default:
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"capabilities":{},"apiUrl":"http://x","downloadUrl":"http://x","uploadUrl":"http://x","eventSourceUrl":"http://x","state":"s"}`)
+			io.WriteString(w, `{"capabilities":{},"apiUrl":"/api","downloadUrl":"/d","uploadUrl":"/u","eventSourceUrl":"/e","state":"s"}`)
 		}
 	}))
 	defer srv.Close()
@@ -70,7 +70,7 @@ func TestTrustedHostsAllowsSameHost(t *testing.T) {
 			http.Redirect(w, r, "/session", http.StatusFound)
 		default:
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"capabilities":{},"apiUrl":"http://x","downloadUrl":"http://x","uploadUrl":"http://x","eventSourceUrl":"http://x","state":"s"}`)
+			io.WriteString(w, `{"capabilities":{},"apiUrl":"/api","downloadUrl":"/d","uploadUrl":"/u","eventSourceUrl":"/e","state":"s"}`)
 		}
 	}))
 	defer srv.Close()

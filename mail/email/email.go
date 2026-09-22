@@ -34,33 +34,36 @@ type Email struct {
 
 	Keywords map[string]bool `json:"keywords,omitzero"`
 
-	Size uint64 `json:"size,omitzero"`
+	// Size is server-set: nil omits it so a create does not send 0.
+	Size *jmap.UnsignedInt `json:"size,omitzero"`
 
 	ReceivedAt *jmap.UTCDate `json:"receivedAt,omitzero"`
 
 	Headers []*Header `json:"headers,omitzero"`
 
-	MessageID []string `json:"messageId,omitzero"`
+	// The header-derived properties below are JSON null when the message has
+	// no such header (RFC 8621 §4.1.2).
+	MessageID jmap.Optional[[]string] `json:"messageId,omitzero"`
 
-	InReplyTo []string `json:"inReplyTo,omitzero"`
+	InReplyTo jmap.Optional[[]string] `json:"inReplyTo,omitzero"`
 
-	References []string `json:"references,omitzero"`
+	References jmap.Optional[[]string] `json:"references,omitzero"`
 
-	Sender []*mail.Address `json:"sender,omitzero"`
+	Sender jmap.Optional[[]*mail.Address] `json:"sender,omitzero"`
 
-	From []*mail.Address `json:"from,omitzero"`
+	From jmap.Optional[[]*mail.Address] `json:"from,omitzero"`
 
-	To []*mail.Address `json:"to,omitzero"`
+	To jmap.Optional[[]*mail.Address] `json:"to,omitzero"`
 
-	CC []*mail.Address `json:"cc,omitzero"`
+	CC jmap.Optional[[]*mail.Address] `json:"cc,omitzero"`
 
-	BCC []*mail.Address `json:"bcc,omitzero"`
+	BCC jmap.Optional[[]*mail.Address] `json:"bcc,omitzero"`
 
-	ReplyTo []*mail.Address `json:"replyTo,omitzero"`
+	ReplyTo jmap.Optional[[]*mail.Address] `json:"replyTo,omitzero"`
 
-	Subject string `json:"subject,omitzero"`
+	Subject jmap.Optional[string] `json:"subject,omitzero"`
 
-	SentAt *jmap.Date `json:"sentAt,omitzero"`
+	SentAt jmap.Optional[jmap.Date] `json:"sentAt,omitzero"`
 
 	BodyStructure *BodyPart `json:"bodyStructure,omitzero"`
 
@@ -72,17 +75,18 @@ type Email struct {
 
 	Attachments []*BodyPart `json:"attachments,omitzero"`
 
-	HasAttachment bool `json:"hasAttachment,omitzero"`
+	// HasAttachment is server-set: nil omits it, *false stays on the wire.
+	HasAttachment *bool `json:"hasAttachment,omitzero"`
 
 	Preview string `json:"preview,omitzero"`
 
-	SMIMEStatus string `json:"smimeStatus,omitzero"`
+	SMIMEStatus jmap.Optional[string] `json:"smimeStatus,omitzero"`
 
-	SMIMEStatusAtDelivery string `json:"smimeStatusAtDelivery,omitzero"`
+	SMIMEStatusAtDelivery jmap.Optional[string] `json:"smimeStatusAtDelivery,omitzero"`
 
-	SMIMEErrors []string `json:"smimeErrors,omitzero"`
+	SMIMEErrors jmap.Optional[[]string] `json:"smimeErrors,omitzero"`
 
-	SMIMEVerifiedAt *jmap.UTCDate `json:"smimeVerifiedAt,omitzero"`
+	SMIMEVerifiedAt jmap.Optional[jmap.UTCDate] `json:"smimeVerifiedAt,omitzero"`
 
 	// Extra holds header:* and other unrecognized properties (Approach A embed).
 	Extra map[string]jsontext.Value `json:",embed"`
@@ -90,10 +94,13 @@ type Email struct {
 
 func (Email) JMAPType() string { return "Email" }
 
+func (Email) JMAPCreatable() {}
+
 func (Email) Requires() []jmap.URI { return []jmap.URI{mail.URI} }
 
 type AddressGroup struct {
-	Name string `json:"name,omitzero"`
+	// Name is JSON null for an ungrouped list of addresses.
+	Name jmap.Optional[string] `json:"name,omitzero"`
 
 	Addresses []*mail.Address `json:"addresses,omitzero"`
 }
@@ -101,33 +108,36 @@ type AddressGroup struct {
 type Header struct {
 	Name string `json:"name,omitzero"`
 
-	Value string `json:"value,omitzero"`
+	// Value has no omitzero: an empty header value must stay on the wire.
+	Value string `json:"value"`
 }
 
 type BodyPart struct {
-	PartID string `json:"partId,omitzero"`
+	// PartID is JSON null for a part with no body content (e.g. multipart).
+	PartID jmap.Optional[string] `json:"partId,omitzero"`
 
-	BlobID jmap.ID `json:"blobId,omitzero"`
+	BlobID jmap.Optional[jmap.ID] `json:"blobId,omitzero"`
 
-	Size uint64 `json:"size,omitzero"`
+	// Size is server-set: nil omits it so a create does not send 0.
+	Size *jmap.UnsignedInt `json:"size,omitzero"`
 
 	Headers []*Header `json:"headers,omitzero"`
 
-	Name string `json:"name,omitzero"`
+	Name jmap.Optional[string] `json:"name,omitzero"`
 
 	Type string `json:"type,omitzero"`
 
-	Charset string `json:"charset,omitzero"`
+	Charset jmap.Optional[string] `json:"charset,omitzero"`
 
-	Disposition string `json:"disposition,omitzero"`
+	Disposition jmap.Optional[string] `json:"disposition,omitzero"`
 
-	CID string `json:"cid,omitzero"`
+	CID jmap.Optional[string] `json:"cid,omitzero"`
 
-	Language []string `json:"language,omitzero"`
+	Language jmap.Optional[[]string] `json:"language,omitzero"`
 
-	Location string `json:"location,omitzero"`
+	Location jmap.Optional[string] `json:"location,omitzero"`
 
-	SubParts []*BodyPart `json:"subParts,omitzero"`
+	SubParts jmap.Optional[[]*BodyPart] `json:"subParts,omitzero"`
 
 	// Extra holds header:* properties on body parts.
 	Extra map[string]jsontext.Value `json:",embed"`
@@ -136,7 +146,8 @@ type BodyPart struct {
 type BodyValue struct {
 	Value string `json:"value"`
 
-	IsEncodingProblem bool `json:"isEncodingProblem,omitzero"`
+	// IsEncodingProblem has no omitzero: it is a mandatory Boolean.
+	IsEncodingProblem bool `json:"isEncodingProblem"`
 
 	// IsTruncated has no omitzero: servers/clients often need explicit false.
 	IsTruncated bool `json:"isTruncated"`

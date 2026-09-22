@@ -1,7 +1,7 @@
 package principal
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestFilterConditionMarshal(t *testing.T) {
-	data, err := json.Marshal(&FilterCondition{
+	data, err := jsonv2.Marshal(&FilterCondition{
 		AccountIDs:      []jmap.ID{"a1", "a2"},
 		Email:           "jane@example.com",
 		Name:            "Jane Doe",
@@ -25,7 +25,7 @@ func TestFilterConditionMarshal(t *testing.T) {
 }
 
 func TestFilterOperatorMarshal(t *testing.T) {
-	data, err := json.Marshal(And(
+	data, err := jsonv2.Marshal(And(
 		&FilterCondition{Name: "Jane Doe"},
 		&FilterCondition{Type: TypeGroup},
 	))

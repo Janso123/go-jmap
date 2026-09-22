@@ -16,7 +16,7 @@ type CalendarAlert struct {
 
 	UID string `json:"uid,omitzero"`
 
-	RecurrenceID *jscalendar.LocalDateTime `json:"recurrenceId,omitzero"`
+	RecurrenceID jmap.Optional[jscalendar.LocalDateTime] `json:"recurrenceId,omitzero"`
 
 	AlertID string `json:"alertId,omitzero"`
 }

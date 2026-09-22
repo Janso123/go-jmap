@@ -1,7 +1,7 @@
 package contactcard
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -16,12 +16,12 @@ func TestGetInvoke(t *testing.T) {
 
 	id := req.Invoke(&Get{
 		Account:    "u1",
-		IDs:        []jmap.ID{"c1"},
-		Properties: []string{"uid", "name"},
+		IDs:        jmap.Some([]jmap.ID{"c1"}),
+		Properties: jmap.Some([]string{"uid", "name"}),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/get",{"accountId":"u1","ids":["c1"],"properties":["uid","name"]},"0"]]}`,
@@ -46,7 +46,7 @@ func TestGetInvokeWithResultReferences(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/get",{"accountId":"u1","#ids":{"resultOf":"c1","name":"ContactCard/changes","path":"/created"},"#properties":{"resultOf":"c2","name":"Core/echo","path":"/properties"}},"0"]]}`,
@@ -63,11 +63,11 @@ func TestChangesInvoke(t *testing.T) {
 	id := req.Invoke(&Changes{
 		Account:    "u1",
 		SinceState: "s1",
-		MaxChanges: 50,
+		MaxChanges: jmap.Uint64Ptr(50),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/changes",{"accountId":"u1","sinceState":"s1","maxChanges":50},"0"]]}`,
@@ -94,10 +94,10 @@ func TestQueryInvoke(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/query",{"accountId":"u1","limit":10,"filter":{"inAddressBook":"ab1","name/given":"Ada"},"sort":[{"property":"name/given","isAscending":false}]},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/query",{"accountId":"u1","limit":10,"filter":{"inAddressBook":"ab1","name/given":"Ada"},"sort":[{"property":"name/given"}]},"0"]]}`,
 		string(data))
 }
 
@@ -113,14 +113,14 @@ func TestQueryChangesInvoke(t *testing.T) {
 		Filter:          &FilterCondition{Email: "ada@example.com"},
 		Sort:            []*jmap.Comparator{{Property: "name/surname"}},
 		SinceQueryState: "q1",
-		MaxChanges:      25,
+		MaxChanges:      jmap.Uint64Ptr(25),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":25,"filter":{"email":"ada@example.com"},"sort":[{"property":"name/surname","isAscending":false}]},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":25,"filter":{"email":"ada@example.com"},"sort":[{"property":"name/surname"}]},"0"]]}`,
 		string(data))
 }
 
@@ -133,7 +133,7 @@ func TestSetInvoke(t *testing.T) {
 
 	id := req.Invoke(&Set{
 		Account: "u1",
-		Create: map[jmap.ID]*ContactCard{
+		Create: jmap.Some(map[jmap.ID]*ContactCard{
 			"c1": {
 				AddressBookIDs: map[jmap.ID]bool{
 					"ab1": true,
@@ -142,11 +142,11 @@ func TestSetInvoke(t *testing.T) {
 					UID: "urn:uuid:ada",
 				},
 			},
-		},
+		}),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/set",{"accountId":"u1","create":{"c1":{"addressBookIds":{"ab1":true},"uid":"urn:uuid:ada"}}},"0"]]}`,
@@ -156,14 +156,14 @@ func TestSetInvoke(t *testing.T) {
 func TestSetJSON(t *testing.T) {
 	set := &Set{
 		Account: "u1",
-		Update: map[jmap.ID]jmap.Patch{
+		Update: jmap.Some(map[jmap.ID]jmap.Patch{
 			"c1": {
 				"notes/n1": nil,
 			},
-		},
+		}),
 	}
 
-	data, err := json.Marshal(set)
+	data, err := jsonv2.Marshal(set)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"accountId":"u1","update":{"c1":{"notes/n1":null}}}`,
@@ -180,18 +180,18 @@ func TestCopyInvoke(t *testing.T) {
 	id := req.Invoke(&Copy{
 		FromAccount: "u1",
 		Account:     "u2",
-		Create: map[jmap.ID]*ContactCard{
+		Create: jmap.Some(map[jmap.ID]*ContactCard{
 			"c1": {
 				AddressBookIDs: map[jmap.ID]bool{
 					"ab2": true,
 				},
 			},
-		},
+		}),
 		OnSuccessDestroyOriginal: true,
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:contacts"],"methodCalls":[["ContactCard/copy",{"fromAccountId":"u1","accountId":"u2","create":{"c1":{"addressBookIds":{"ab2":true}}},"onSuccessDestroyOriginal":true},"0"]]}`,
@@ -200,4 +200,13 @@ func TestCopyInvoke(t *testing.T) {
 
 func TestCopyRequiresContactsCapability(t *testing.T) {
 	assert.Equal(t, []jmap.URI{contacts.URI}, (&Copy{}).Requires())
+}
+
+func TestChangesResponseMatchesKit(t *testing.T) {
+	t.Parallel()
+	data, err := jsonv2.Marshal(ChangesResponse{NewState: "s"})
+	require.NoError(t, err)
+	kit, err := jsonv2.Marshal(jmap.ChangesResponse{NewState: "s"})
+	require.NoError(t, err)
+	assert.JSONEq(t, string(kit), string(data))
 }

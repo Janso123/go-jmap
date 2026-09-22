@@ -24,5 +24,19 @@ func DatePtr(t time.Time) *Date {
 	return &d
 }
 
+// UintPtr returns a pointer to n for optional UnsignedInt JSON fields.
+//
+//go:fix inline
+func UintPtr(n UnsignedInt) *UnsignedInt { return new(n) }
+
 // Uint64Ptr returns a pointer to n for optional UnsignedInt JSON fields.
-func Uint64Ptr(n uint64) *uint64 { return new(n) }
+func Uint64Ptr(n uint64) *UnsignedInt {
+	u := UnsignedInt(n)
+	return &u
+}
+
+// SomeUint returns a set Optional holding n.
+func SomeUint(n UnsignedInt) Optional[UnsignedInt] { return Some(n) }
+
+// SomeInt returns a set Optional holding n.
+func SomeInt(n Int) Optional[Int] { return Some(n) }

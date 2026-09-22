@@ -1,11 +1,9 @@
 package email
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 	"time"
-
-	jsonv2 "encoding/json/v2"
 
 	"github.com/Janso123/go-jmap"
 	"github.com/stretchr/testify/assert"
@@ -14,13 +12,13 @@ import (
 
 func TestFilter(t *testing.T) {
 	filter := &FilterCondition{}
-	data, err := json.Marshal(filter)
+	data, err := jsonv2.Marshal(filter)
 	assert.NoError(t, err)
 	assert.Equal(t, "{}", string(data))
 }
 
 func TestFilterWithAttachmentMarshal(t *testing.T) {
-	data, err := json.Marshal(WithAttachment())
+	data, err := jsonv2.Marshal(WithAttachment())
 	assert.NoError(t, err)
 	assert.Equal(t, `{"hasAttachment":true}`, string(data))
 }
@@ -68,9 +66,9 @@ func TestFilterAndOperatorWire(t *testing.T) {
 func TestEmailSMIMEFilterMarshal(t *testing.T) {
 	t.Parallel()
 	f := &FilterCondition{
-		HasSMIME:                   jmap.Bool(true),
-		HasVerifiedSMIME:           jmap.Bool(true),
-		HasVerifiedSMIMEAtDelivery: jmap.Bool(true),
+		HasSMIME:                   new(true),
+		HasVerifiedSMIME:           new(true),
+		HasVerifiedSMIMEAtDelivery: new(true),
 	}
 	b, err := jsonv2.Marshal(f)
 	require.NoError(t, err)
@@ -86,7 +84,20 @@ func TestFilterHasAttachmentFalseOnWire(t *testing.T) {
 	b, err := jsonv2.Marshal(WithoutAttachment())
 	require.NoError(t, err)
 	require.JSONEq(t, `{"hasAttachment":false}`, string(b))
-	b, err = jsonv2.Marshal(&FilterCondition{HasSMIME: jmap.Bool(false)})
+	b, err = jsonv2.Marshal(&FilterCondition{HasSMIME: new(false)})
 	require.NoError(t, err)
 	require.JSONEq(t, `{"hasSmime":false}`, string(b))
+}
+
+func TestFilterMaxSizeZeroOnWire(t *testing.T) {
+	t.Parallel()
+	b, err := jsonv2.Marshal(&FilterCondition{MaxSize: jmap.Uint64Ptr(0)})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"maxSize":0}`, string(b))
+	b, err = jsonv2.Marshal(&FilterCondition{MinSize: jmap.Uint64Ptr(0)})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"minSize":0}`, string(b))
+	b, err = jsonv2.Marshal(&FilterCondition{})
+	require.NoError(t, err)
+	require.JSONEq(t, `{}`, string(b))
 }

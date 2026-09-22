@@ -1,7 +1,6 @@
 package contactcard
 
 import (
-	"encoding/json"
 	jsonv2 "encoding/json/v2"
 	"strings"
 	"testing"
@@ -24,7 +23,7 @@ func TestContactCardJSON(t *testing.T) {
 		},
 	}
 
-	data, err := json.Marshal(card)
+	data, err := jsonv2.Marshal(card)
 	require.NoError(t, err)
 
 	assert.JSONEq(t, `{

@@ -17,7 +17,7 @@ func (m *Validate) Requires() []jmap.URI { return []jmap.URI{URI} }
 type ValidateResponse struct {
 	Account jmap.ID `json:"accountId,omitzero"`
 
-	Error *jmap.SetError `json:"error,omitzero"`
+	Error jmap.Optional[jmap.SetError] `json:"error,omitzero"`
 }
 
 func newValidateResponse() jmap.MethodResponse { return &ValidateResponse{} }

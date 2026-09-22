@@ -1,7 +1,7 @@
 package sharenotification
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 	"time"
 
@@ -17,7 +17,7 @@ func TestQueryInvoke(t *testing.T) {
 	id := req.Invoke(&Query{
 		Account: "u1",
 		Filter: &FilterCondition{
-			After:      &after,
+			After:      jmap.Some(after),
 			ObjectType: "Mailbox",
 		},
 		Sort: []*jmap.Comparator{
@@ -27,9 +27,9 @@ func TestQueryInvoke(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["ShareNotification/query",{"accountId":"u1","limit":10,"filter":{"after":"2026-09-01T00:00:00Z","objectType":"Mailbox"},"sort":[{"property":"created","isAscending":false}]},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["ShareNotification/query",{"accountId":"u1","limit":10,"filter":{"after":"2026-09-01T00:00:00Z","objectType":"Mailbox"},"sort":[{"property":"created"}]},"0"]]}`,
 		string(data))
 }

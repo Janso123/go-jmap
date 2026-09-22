@@ -19,5 +19,5 @@ func Asc(prop string) *jmap.Comparator  { return jmap.Asc(prop) }
 func Desc(prop string) *jmap.Comparator { return jmap.Desc(prop) }
 
 func ByKeyword(kw string, ascending bool) *jmap.Comparator {
-	return &jmap.Comparator{Property: SortHasKeyword, Keyword: kw, IsAscending: ascending}
+	return &jmap.Comparator{Property: SortHasKeyword, Keyword: kw, IsAscending: new(ascending)}
 }

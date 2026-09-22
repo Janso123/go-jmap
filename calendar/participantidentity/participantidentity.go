@@ -11,8 +11,6 @@ func init() {
 			jmap.MethodChanges |
 			jmap.MethodSet,
 	)
-	// ParticipantIdentity/changes includes updatedProperties; override kit factory.
-	jmap.RegisterMethod("ParticipantIdentity/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 // ParticipantIdentity stores information about a URI that represents the user
@@ -25,9 +23,11 @@ type ParticipantIdentity struct {
 
 	CalendarAddress string `json:"calendarAddress,omitzero"`
 
-	IsDefault bool `json:"isDefault,omitzero"`
+	IsDefault *bool `json:"isDefault,omitzero"`
 }
 
 func (ParticipantIdentity) JMAPType() string { return "ParticipantIdentity" }
+
+func (ParticipantIdentity) JMAPCreatable() {}
 
 func (ParticipantIdentity) Requires() []jmap.URI { return []jmap.URI{calendar.URI} }

@@ -64,6 +64,32 @@ func TestDiscoverUsesSRV(t *testing.T) {
 	}
 }
 
+func TestDiscoverRejectsNonHostnameDomain(t *testing.T) {
+	orig := lookupSRV
+	t.Cleanup(func() { lookupSRV = orig })
+	lookupSRV = func(ctx context.Context, service, proto, name string) (string, []*net.SRV, error) {
+		t.Fatal("lookupSRV must not run for an invalid domain")
+		return "", nil, nil
+	}
+
+	cases := []string{
+		"evil.example/steal",
+		"user:pass@evil.example",
+		"https://evil.example",
+		"evil.example?x=1",
+		"evil.example#frag",
+		"evil.example/path",
+		"",
+		"evil.example:443",
+	}
+	for _, domain := range cases {
+		_, err := Discover(context.Background(), domain)
+		if err == nil {
+			t.Fatalf("Discover(%q) succeeded, want error", domain)
+		}
+	}
+}
+
 func TestDiscoverContextCanceled(t *testing.T) {
 	orig := lookupSRV
 	t.Cleanup(func() { lookupSRV = orig })

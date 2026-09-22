@@ -4,17 +4,35 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 )
 
 // lookupSRV is the DNS SRV lookup used by Discover. Tests may replace it.
 var lookupSRV = net.DefaultResolver.LookupSRV
 
+func validateDiscoverDomain(domain string) error {
+	if domain == "" || strings.ContainsAny(domain, "/\\?#@[]") || strings.Contains(domain, "://") || strings.Contains(domain, ":") {
+		return fmt.Errorf("jmap: discover: domain must be a hostname")
+	}
+	u, err := url.Parse("https://" + domain)
+	if err != nil || u.User != nil || u.Host != domain || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("jmap: discover: domain must be a hostname")
+	}
+	if u.Hostname() == "" {
+		return fmt.Errorf("jmap: discover: domain must be a hostname")
+	}
+	return nil
+}
+
 // Discover the Session Endpoint of a domain.
 // It looks up _jmap._tcp SRV records; if lookup fails or returns no records,
 // it falls back to https://<domain>/.well-known/jmap.
 func Discover(ctx context.Context, domain string) (string, error) {
 	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if err := validateDiscoverDomain(domain); err != nil {
 		return "", err
 	}
 

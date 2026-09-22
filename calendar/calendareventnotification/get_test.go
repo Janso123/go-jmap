@@ -1,7 +1,7 @@
 package calendareventnotification
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -15,12 +15,12 @@ func TestGetInvoke(t *testing.T) {
 
 	id := req.Invoke(&Get{
 		Account:    "u1",
-		IDs:        []jmap.ID{"cn1"},
-		Properties: []string{"type", "calendarEventId", "event"},
+		IDs:        jmap.Some([]jmap.ID{"cn1"}),
+		Properties: jmap.Some([]string{"type", "calendarEventId", "event"}),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEventNotification/get",{"accountId":"u1","ids":["cn1"],"properties":["type","calendarEventId","event"]},"0"]]}`,

@@ -37,7 +37,7 @@ func TestEventSourcePingAndLastEventID(t *testing.T) {
 			Session:    &jmap.Session{EventSourceURL: srv.URL},
 		},
 		LastEventID: "42",
-		OnPing:      func() { pinged.Store(true) },
+		OnPing:      func(uint64, []byte) { pinged.Store(true) },
 		Handler: func(sc *jmap.StateChange) {
 			got = sc
 		},
@@ -209,7 +209,7 @@ func TestEventSourceNilHTTPClient(t *testing.T) {
 			HttpClient: nil, // must not panic
 			Session:    &jmap.Session{EventSourceURL: srv.URL},
 		},
-		OnPing: func() { pinged.Store(true) },
+		OnPing: func(uint64, []byte) { pinged.Store(true) },
 	}
 
 	err := es.Listen(context.Background())
@@ -250,7 +250,7 @@ func TestEventSourceReconnectPreservesLastEventID(t *testing.T) {
 		},
 		Handler: func(*jmap.StateChange) {},
 	}
-	es.OnPing = func() {
+	es.OnPing = func(uint64, []byte) {
 		pinged.Store(true)
 		es.Close()
 	}
@@ -285,11 +285,138 @@ func TestEventSourceExpandsURITemplate(t *testing.T) {
 		Events:          []jmap.EventType{"Email"},
 		Ping:            300,
 		CloseAfterState: true,
-		OnPing:          func() {},
+		OnPing:          func(uint64, []byte) {},
 		Handler:         func(*jmap.StateChange) {},
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_ = es.Listen(ctx)
 	require.Equal(t, "/Email/state/300", gotPath)
+}
+
+func TestPingDeliversInterval(t *testing.T) {
+	body := "event: ping\ndata: {\"interval\":30}\n\nevent: ping\ndata: {\"interval\":15}\n\n"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, body)
+	}))
+	t.Cleanup(srv.Close)
+
+	var got []uint64
+	es := &EventSource{
+		Client: &jmap.Client{
+			HttpClient: srv.Client(),
+			Session:    &jmap.Session{EventSourceURL: srv.URL},
+		},
+	}
+	es.OnPing = func(iv uint64, _ []byte) { got = append(got, iv) }
+
+	err := es.Listen(context.Background())
+	require.ErrorIs(t, err, io.EOF)
+	require.Equal(t, []uint64{30, 15}, got)
+}
+
+func TestLastEventDispatchedAtEOF(t *testing.T) {
+	body := "event: state\ndata: {\"@type\":\"StateChange\",\"changed\":{}}" // no trailing blank line
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, body)
+	}))
+	t.Cleanup(srv.Close)
+
+	var n int
+	es := &EventSource{
+		Client: &jmap.Client{
+			HttpClient: srv.Client(),
+			Session:    &jmap.Session{EventSourceURL: srv.URL},
+		},
+		Handler: func(*jmap.StateChange) { n++ },
+	}
+
+	err := es.Listen(context.Background())
+	require.ErrorIs(t, err, io.EOF)
+	require.Equal(t, 1, n)
+}
+
+func TestCloseAfterStateDoesNotRedial(t *testing.T) {
+	var dials atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dials.Add(1)
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "event: state\ndata: {\"@type\":\"StateChange\",\"changed\":{}}\n\n")
+	}))
+	t.Cleanup(srv.Close)
+
+	es := &EventSource{
+		Client: &jmap.Client{
+			HttpClient: srv.Client(),
+			Session:    &jmap.Session{EventSourceURL: srv.URL},
+		},
+		CloseAfterState: true,
+		Reconnect: &ReconnectOptions{
+			MinBackoff: 5 * time.Millisecond,
+			MaxBackoff: 20 * time.Millisecond,
+		},
+		Handler: func(*jmap.StateChange) {},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
+	defer cancel()
+	err := es.Listen(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), dials.Load())
+}
+
+func TestNonEventStreamContentTypeFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, "<html>not a stream</html>")
+	}))
+	t.Cleanup(srv.Close)
+
+	es := &EventSource{
+		Client: &jmap.Client{
+			HttpClient: srv.Client(),
+			Session:    &jmap.Session{EventSourceURL: srv.URL},
+		},
+	}
+
+	err := es.Listen(context.Background())
+	require.Error(t, err)
+	require.NotErrorIs(t, err, io.EOF)
+}
+
+func TestSSERetryDoesNotPinLaterBackoff(t *testing.T) {
+	min := 50 * time.Millisecond
+	es := &EventSource{
+		Retry: time.Millisecond, // retry: 1
+		Reconnect: &ReconnectOptions{
+			MinBackoff: min,
+			MaxBackoff: 400 * time.Millisecond,
+		},
+	}
+
+	first := es.reconnectDelay(es.Reconnect.minBackoff())
+	backoff := nextBackoff(es.Reconnect.minBackoff(), es.Reconnect.maxBackoff())
+	second := es.reconnectDelay(backoff)
+
+	require.GreaterOrEqual(t, first, min)
+	require.GreaterOrEqual(t, second, min)
+	require.Greater(t, second, time.Millisecond, "second wait must not stay pinned at retry: 1")
+	require.Greater(t, second, first, "backoff must grow after the one-shot retry: is consumed")
+}
+
+func TestHTTP429RetryAfterNotCapped(t *testing.T) {
+	es := &EventSource{
+		Reconnect: &ReconnectOptions{
+			MinBackoff: time.Second,
+			MaxBackoff: 30 * time.Second,
+		},
+	}
+	err := &httpStatusError{
+		status:     http.StatusTooManyRequests,
+		retryAfter: parseRetryAfter("3600"),
+	}
+	d := es.delayAfterConnectError(err, time.Second)
+	require.Equal(t, 3600*time.Second, d)
 }

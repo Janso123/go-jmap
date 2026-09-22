@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCollationConstantsTyped(t *testing.T) {
+	var c jmap.CollationAlgo = jmap.ASCIICasemap
+	require.Equal(t, jmap.CollationAlgo("i;ascii-casemap"), c)
+}
+
 func TestIdLength(t *testing.T) {
 	cases := []struct {
 		id    string

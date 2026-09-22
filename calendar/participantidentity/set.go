@@ -7,7 +7,7 @@ import "github.com/Janso123/go-jmap"
 type Set struct {
 	jmap.Set[ParticipantIdentity]
 
-	OnSuccessSetIsDefault jmap.ID `json:"onSuccessSetIsDefault,omitzero"`
+	OnSuccessSetIsDefault jmap.Optional[jmap.ID] `json:"onSuccessSetIsDefault,omitzero"`
 }
 
 // SetResponse is the result of ParticipantIdentity/set.

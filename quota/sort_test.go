@@ -1,7 +1,7 @@
 package quota
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -16,7 +16,7 @@ func TestSortMarshal(t *testing.T) {
 		},
 	}
 
-	data, err := json.Marshal(query)
+	data, err := jsonv2.Marshal(query)
 	require.NoError(t, err)
-	assert.Equal(t, `{"sort":[{"property":"used","isAscending":false}]}`, string(data))
+	assert.Equal(t, `{"sort":[{"property":"used"}]}`, string(data))
 }

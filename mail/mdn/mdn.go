@@ -20,29 +20,29 @@ func (m *Capability) New() jmap.Capability { return &Capability{} }
 // A Message Delivery Notification (MDN) object
 // https://www.rfc-editor.org/rfc/rfc9007.html#section-2
 type MDN struct {
-	ForEmailID jmap.ID `json:"forEmailId,omitzero"`
+	ForEmailID jmap.Optional[jmap.ID] `json:"forEmailId,omitzero"`
 
-	Subject string `json:"subject,omitzero"`
+	Subject jmap.Optional[string] `json:"subject,omitzero"`
 
-	TextBody string `json:"textBody,omitzero"`
+	TextBody jmap.Optional[string] `json:"textBody,omitzero"`
 
-	IncludeOriginalmessage bool `json:"includeOriginalMessage,omitzero"`
+	IncludeOriginalMessage *bool `json:"includeOriginalMessage,omitzero"`
 
-	ReportingUA string `json:"reportingUA,omitzero"`
+	ReportingUA jmap.Optional[string] `json:"reportingUA,omitzero"`
 
 	Disposition *Disposition `json:"disposition,omitzero"`
 
-	MDNGateway string `json:"mdnGateway,omitzero"`
+	MDNGateway jmap.Optional[string] `json:"mdnGateway,omitzero"`
 
-	OriginalRecipient string `json:"originalRecipient,omitzero"`
+	OriginalRecipient jmap.Optional[string] `json:"originalRecipient,omitzero"`
 
-	FinalRecipient string `json:"finalRecipient,omitzero"`
+	FinalRecipient jmap.Optional[string] `json:"finalRecipient,omitzero"`
 
-	OriginalMessageID string `json:"originalMessageId,omitzero"`
+	OriginalMessageID jmap.Optional[string] `json:"originalMessageId,omitzero"`
 
-	Error []string `json:"error,omitzero"`
+	Error jmap.Optional[[]string] `json:"error,omitzero"`
 
-	ExtensionFields map[string]string `json:"extensionFields,omitzero"`
+	ExtensionFields jmap.Optional[map[string]string] `json:"extensionFields,omitzero"`
 }
 
 type ActionMode string

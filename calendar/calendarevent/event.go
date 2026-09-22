@@ -10,19 +10,19 @@ import (
 // CalendarEvent is a JSCalendar Event with JMAP Calendars metadata.
 // https://datatracker.ietf.org/doc/html/draft-ietf-jmap-calendars-29#section-5
 type CalendarEvent struct {
-	ID *jmap.ID `json:"id,omitzero"`
+	ID jmap.Optional[jmap.ID] `json:"id,omitzero"`
 
-	BaseEventID *jmap.ID `json:"baseEventId,omitzero"`
+	BaseEventID jmap.Optional[jmap.ID] `json:"baseEventId,omitzero"`
 
-	CalendarIDs *map[jmap.ID]bool `json:"calendarIds,omitzero"`
+	CalendarIDs jmap.Optional[map[jmap.ID]bool] `json:"calendarIds,omitzero"`
 
-	IsDraft *bool `json:"isDraft,omitzero"`
+	IsDraft jmap.Optional[bool] `json:"isDraft,omitzero"`
 
-	IsOrigin *bool `json:"isOrigin,omitzero"`
+	IsOrigin jmap.Optional[bool] `json:"isOrigin,omitzero"`
 
-	UTCStart *jscalendar.UTCDateTime `json:"utcStart,omitzero"`
+	UTCStart jmap.Optional[jscalendar.UTCDateTime] `json:"utcStart,omitzero"`
 
-	UTCEnd *jscalendar.UTCDateTime `json:"utcEnd,omitzero"`
+	UTCEnd jmap.Optional[jscalendar.UTCDateTime] `json:"utcEnd,omitzero"`
 
 	UseDefaultAlerts bool `json:"useDefaultAlerts,omitzero"`
 
@@ -40,18 +40,18 @@ type CalendarEvent struct {
 // calendarEventJSON is CalendarEvent without custom marshalers so json/v2 can
 // apply Event's Extra embed together with the JMAP metadata keys.
 type calendarEventJSON struct {
-	ID               *jmap.ID                `json:"id,omitzero"`
-	BaseEventID      *jmap.ID                `json:"baseEventId,omitzero"`
-	CalendarIDs      *map[jmap.ID]bool       `json:"calendarIds,omitzero"`
-	IsDraft          *bool                   `json:"isDraft,omitzero"`
-	IsOrigin         *bool                   `json:"isOrigin,omitzero"`
-	UTCStart         *jscalendar.UTCDateTime `json:"utcStart,omitzero"`
-	UTCEnd           *jscalendar.UTCDateTime `json:"utcEnd,omitzero"`
-	UseDefaultAlerts bool                    `json:"useDefaultAlerts,omitzero"`
-	MayInviteSelf    bool                    `json:"mayInviteSelf,omitzero"`
-	MayInviteOthers  bool                    `json:"mayInviteOthers,omitzero"`
-	HideAttendees    bool                    `json:"hideAttendees,omitzero"`
-	ICalendar        string                  `json:"iCalendar,omitzero"`
+	ID               jmap.Optional[jmap.ID]                `json:"id,omitzero"`
+	BaseEventID      jmap.Optional[jmap.ID]                `json:"baseEventId,omitzero"`
+	CalendarIDs      jmap.Optional[map[jmap.ID]bool]       `json:"calendarIds,omitzero"`
+	IsDraft          jmap.Optional[bool]                   `json:"isDraft,omitzero"`
+	IsOrigin         jmap.Optional[bool]                   `json:"isOrigin,omitzero"`
+	UTCStart         jmap.Optional[jscalendar.UTCDateTime] `json:"utcStart,omitzero"`
+	UTCEnd           jmap.Optional[jscalendar.UTCDateTime] `json:"utcEnd,omitzero"`
+	UseDefaultAlerts bool                                  `json:"useDefaultAlerts,omitzero"`
+	MayInviteSelf    bool                                  `json:"mayInviteSelf,omitzero"`
+	MayInviteOthers  bool                                  `json:"mayInviteOthers,omitzero"`
+	HideAttendees    bool                                  `json:"hideAttendees,omitzero"`
+	ICalendar        string                                `json:"iCalendar,omitzero"`
 	jscalendar.Event
 }
 

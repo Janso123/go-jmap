@@ -1,7 +1,6 @@
 package calendarevent
 
 import (
-	"encoding/json"
 	jsonv2 "encoding/json/v2"
 	"strings"
 	"testing"
@@ -28,13 +27,13 @@ func TestCalendarEventJSON(t *testing.T) {
 	end := jscalendar.UTCDateTime("2026-03-01T09:00:00Z")
 
 	event := CalendarEvent{
-		ID:          new(jmap.ID("ev1")),
-		BaseEventID: &baseID,
-		CalendarIDs: new(map[jmap.ID]bool{"cal1": true}),
-		IsDraft:     new(true),
-		IsOrigin:    new(true),
-		UTCStart:    &start,
-		UTCEnd:      &end,
+		ID:          jmap.Some(jmap.ID("ev1")),
+		BaseEventID: jmap.Some(baseID),
+		CalendarIDs: jmap.Some(map[jmap.ID]bool{"cal1": true}),
+		IsDraft:     jmap.Some(true),
+		IsOrigin:    jmap.Some(true),
+		UTCStart:    jmap.Some(start),
+		UTCEnd:      jmap.Some(end),
 		UID:         "urn:uuid:ev1",
 		Title:       "Planning",
 		Start:       "2026-03-01T09:00:00",
@@ -42,7 +41,7 @@ func TestCalendarEventJSON(t *testing.T) {
 		Duration:    "PT1H",
 	}
 
-	data, err := json.Marshal(&event)
+	data, err := jsonv2.Marshal(&event)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"id":"ev1",
@@ -60,7 +59,7 @@ func TestCalendarEventJSON(t *testing.T) {
 	}`, string(data))
 
 	var roundTrip CalendarEvent
-	require.NoError(t, json.Unmarshal(data, &roundTrip))
+	require.NoError(t, jsonv2.Unmarshal(data, &roundTrip))
 	assert.Equal(t, event.ID, roundTrip.ID)
 	assert.Equal(t, event.BaseEventID, roundTrip.BaseEventID)
 	assert.Equal(t, event.CalendarIDs, roundTrip.CalendarIDs)
@@ -84,13 +83,13 @@ func TestCalendarEventMarshalDoesNotLeakClearedOverlayFields(t *testing.T) {
 	}`
 
 	var event CalendarEvent
-	require.NoError(t, json.Unmarshal([]byte(input), &event))
+	require.NoError(t, jsonv2.Unmarshal([]byte(input), &event))
 
-	event.ID = nil
-	event.CalendarIDs = nil
-	event.IsDraft = nil
+	event.ID = jmap.Optional[jmap.ID]{}
+	event.CalendarIDs = jmap.Optional[map[jmap.ID]bool]{}
+	event.IsDraft = jmap.Optional[bool]{}
 
-	data, err := json.Marshal(&event)
+	data, err := jsonv2.Marshal(&event)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"uid":"urn:uuid:ev1",
@@ -104,8 +103,12 @@ func TestCalendarEventExtraRoundTrip(t *testing.T) {
 	const input = `{"id":"ev1","calendarIds":{"cal1":true},"uid":"u1","x-unknown":1}`
 	var event CalendarEvent
 	require.NoError(t, jsonv2.Unmarshal([]byte(input), &event))
-	require.Equal(t, jmap.ID("ev1"), *event.ID)
-	require.Equal(t, map[jmap.ID]bool{"cal1": true}, *event.CalendarIDs)
+	id, ok := event.ID.Value()
+	require.True(t, ok)
+	require.Equal(t, jmap.ID("ev1"), id)
+	cals, ok := event.CalendarIDs.Value()
+	require.True(t, ok)
+	require.Equal(t, map[jmap.ID]bool{"cal1": true}, cals)
 	require.Equal(t, "u1", event.UID)
 	raw, ok := event.Extra["x-unknown"]
 	require.True(t, ok)
@@ -130,16 +133,16 @@ func TestGetInvoke(t *testing.T) {
 
 	id := req.Invoke(&Get{
 		Account:                   "u1",
-		IDs:                       []jmap.ID{"ev1"},
-		Properties:                []string{"title", "utcStart"},
-		RecurrenceOverridesBefore: &before,
-		RecurrenceOverridesAfter:  &after,
+		IDs:                       jmap.Some([]jmap.ID{"ev1"}),
+		Properties:                jmap.Some([]string{"title", "utcStart"}),
+		RecurrenceOverridesBefore: jmap.Some(before),
+		RecurrenceOverridesAfter:  jmap.Some(after),
 		ReduceParticipants:        true,
 		TimeZone:                  "Europe/Warsaw",
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/get",{"accountId":"u1","ids":["ev1"],"properties":["title","utcStart"],"recurrenceOverridesBefore":"2026-02-01T00:00:00Z","recurrenceOverridesAfter":"2026-01-01T00:00:00Z","reduceParticipants":true,"timeZone":"Europe/Warsaw"},"0"]]}`,
@@ -156,11 +159,11 @@ func TestChangesInvoke(t *testing.T) {
 	id := req.Invoke(&Changes{
 		Account:    "u1",
 		SinceState: "s1",
-		MaxChanges: 25,
+		MaxChanges: jmap.Uint64Ptr(25),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/changes",{"accountId":"u1","sinceState":"s1","maxChanges":25},"0"]]}`,
@@ -176,10 +179,10 @@ func TestSetInvoke(t *testing.T) {
 
 	id := req.Invoke(&Set{
 		Account: "u1",
-		Create: map[jmap.ID]*CalendarEvent{
+		Create: jmap.Some(map[jmap.ID]*CalendarEvent{
 			"ev1": {
-				CalendarIDs: new(map[jmap.ID]bool{"cal1": true}),
-				IsDraft:     new(true),
+				CalendarIDs: jmap.Some(map[jmap.ID]bool{"cal1": true}),
+				IsDraft:     jmap.Some(true),
 				Event: jscalendar.Event{
 					UID:      "urn:uuid:ev1",
 					Title:    "Planning",
@@ -188,12 +191,12 @@ func TestSetInvoke(t *testing.T) {
 					Duration: "PT1H",
 				},
 			},
-		},
+		}),
 		SendSchedulingMessages: true,
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.JSONEq(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/set",{"accountId":"u1","create":{"ev1":{"calendarIds":{"cal1":true},"isDraft":true,"uid":"urn:uuid:ev1","title":"Planning","start":"2026-03-01T09:00:00","timeZone":"Europe/Warsaw","duration":"PT1H"}},"sendSchedulingMessages":true},"0"]]}`,
@@ -210,21 +213,21 @@ func TestCopyInvoke(t *testing.T) {
 	id := req.Invoke(&Copy{
 		FromAccount: "u1",
 		Account:     "u2",
-		Create: map[jmap.ID]*CalendarEvent{
+		Create: jmap.Some(map[jmap.ID]*CalendarEvent{
 			"ev1": {
-				CalendarIDs: new(map[jmap.ID]bool{"cal2": true}),
+				CalendarIDs: jmap.Some(map[jmap.ID]bool{"cal2": true}),
 				Event: jscalendar.Event{
 					UID:   "urn:uuid:ev1-copy",
 					Title: "Planning copy",
 					Start: "2026-03-02T09:00:00",
 				},
 			},
-		},
+		}),
 		OnSuccessDestroyOriginal: true,
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.JSONEq(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/copy",{"fromAccountId":"u1","accountId":"u2","create":{"ev1":{"calendarIds":{"cal2":true},"uid":"urn:uuid:ev1-copy","title":"Planning copy","start":"2026-03-02T09:00:00"}},"onSuccessDestroyOriginal":true},"0"]]}`,
@@ -241,13 +244,13 @@ func TestQueryChangesInvoke(t *testing.T) {
 	id := req.Invoke(&QueryChanges{
 		Account:         "u1",
 		Filter:          &FilterCondition{UID: "urn:uuid:ev1"},
-		Sort:            []*jmap.Comparator{{Property: "start", IsAscending: true}},
+		Sort:            []*jmap.Comparator{{Property: "start", IsAscending: new(true)}},
 		SinceQueryState: "q1",
-		MaxChanges:      10,
+		MaxChanges:      jmap.Uint64Ptr(10),
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars"],"methodCalls":[["CalendarEvent/queryChanges",{"accountId":"u1","sinceQueryState":"q1","maxChanges":10,"filter":{"uid":"urn:uuid:ev1"},"sort":[{"property":"start","isAscending":true}]},"0"]]}`,
@@ -268,7 +271,7 @@ func TestParseInvoke(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"using":["urn:ietf:params:jmap:calendars:parse"],"methodCalls":[["CalendarEvent/parse",{"accountId":"u1","blobIds":["b1"],"properties":["uid","title","calendarIds"]},"0"]]}`,
@@ -283,20 +286,22 @@ func TestParseResponseUnmarshalNullMetadata(t *testing.T) {
 	raw := []byte(`{"sessionState":"s1","methodResponses":[["CalendarEvent/parse",{"accountId":"u1","parsed":{"b1":[{"id":null,"baseEventId":null,"calendarIds":null,"isDraft":null,"isOrigin":null,"uid":"urn:uuid:ev1","title":"Planning","start":"2026-03-01T09:00:00"}]}},"0"]]}`)
 
 	var resp jmap.Response
-	require.NoError(t, json.Unmarshal(raw, &resp))
+	require.NoError(t, jsonv2.Unmarshal(raw, &resp))
 	require.Len(t, resp.Responses, 1)
 
 	parseResp, ok := resp.Responses[0].Args.(*ParseResponse)
 	require.True(t, ok)
-	require.Contains(t, parseResp.Parsed, jmap.ID("b1"))
-	require.Len(t, parseResp.Parsed["b1"], 1)
+	parsed, ok := parseResp.Parsed.Value()
+	require.True(t, ok)
+	require.Contains(t, parsed, jmap.ID("b1"))
+	require.Len(t, parsed["b1"], 1)
 
-	event := parseResp.Parsed["b1"][0]
-	assert.Nil(t, event.ID)
-	assert.Nil(t, event.BaseEventID)
-	assert.Nil(t, event.CalendarIDs)
-	assert.Nil(t, event.IsDraft)
-	assert.Nil(t, event.IsOrigin)
+	event := parsed["b1"][0]
+	assert.True(t, event.ID.IsNull())
+	assert.True(t, event.BaseEventID.IsNull())
+	assert.True(t, event.CalendarIDs.IsNull())
+	assert.True(t, event.IsDraft.IsNull())
+	assert.True(t, event.IsOrigin.IsNull())
 	assert.Equal(t, "urn:uuid:ev1", event.UID)
 	assert.Equal(t, "Planning", event.Title)
 }

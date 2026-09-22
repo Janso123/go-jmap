@@ -23,9 +23,9 @@ func TestDoMarksSessionStale(t *testing.T) {
 				"primaryAccounts": {},
 				"username": "u",
 				"apiUrl": %q,
-				"downloadUrl": "http://example/download",
-				"uploadUrl": "http://example/upload",
-				"eventSourceUrl": "http://example/event",
+				"downloadUrl": "/download/{accountId}/{blobId}/{name}",
+				"uploadUrl": "/upload/{accountId}",
+				"eventSourceUrl": "/event",
 				"state": "A"
 			}`, apiURL)
 		case r.Method == http.MethodPost && r.URL.Path == "/api":

@@ -1,7 +1,7 @@
 package quota
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ func TestFilterConditionMarshal(t *testing.T) {
 		Type:         "Email",
 	}
 
-	data, err := json.Marshal(filter)
+	data, err := jsonv2.Marshal(filter)
 	require.NoError(t, err)
 	assert.Equal(t,
 		`{"name":"Main quota","scope":"account","resourceType":"octets","type":"Email"}`,

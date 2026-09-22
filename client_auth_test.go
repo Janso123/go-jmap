@@ -21,9 +21,9 @@ func TestAuthenticateSetsAcceptJSON(t *testing.T) {
 		io.WriteString(w, `{
 			"capabilities":{"urn:ietf:params:jmap:core":{}},
 			"accounts":{},"primaryAccounts":{},
-			"username":"u","apiUrl":"http://example/api",
-			"downloadUrl":"http://example/d","uploadUrl":"http://example/u",
-			"eventSourceUrl":"http://example/e","state":"A"
+			"username":"u","apiUrl":"/api",
+			"downloadUrl":"/d","uploadUrl":"/u",
+			"eventSourceUrl":"/e","state":"A"
 		}`)
 	}))
 	defer srv.Close()
@@ -81,8 +81,8 @@ func TestRefreshSessionClearsStaleAndFiresCallback(t *testing.T) {
 				"capabilities":{"urn:ietf:params:jmap:core":{}},
 				"accounts":{},"primaryAccounts":{},
 				"username":"u","apiUrl":%q,
-				"downloadUrl":"http://example/d","uploadUrl":"http://example/u",
-				"eventSourceUrl":"http://example/e","state":%q
+				"downloadUrl":"/d/{accountId}/{blobId}/{name}","uploadUrl":"/u/{accountId}",
+				"eventSourceUrl":"/e","state":%q
 			}`, apiURL, state)
 		case r.Method == http.MethodPost && r.URL.Path == "/api":
 			w.Header().Set("Content-Type", "application/json")

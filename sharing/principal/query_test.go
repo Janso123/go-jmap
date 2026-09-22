@@ -1,7 +1,7 @@
 package principal
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -24,10 +24,10 @@ func TestQueryInvoke(t *testing.T) {
 	})
 	assert.Equal(t, "0", id)
 
-	data, err := json.Marshal(req)
+	data, err := jsonv2.Marshal(req)
 	require.NoError(t, err)
 	assert.Equal(t,
-		`{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["Principal/query",{"accountId":"u1","limit":10,"filter":{"text":"jane"},"sort":[{"property":"name","isAscending":false}]},"0"]]}`,
+		`{"using":["urn:ietf:params:jmap:principals"],"methodCalls":[["Principal/query",{"accountId":"u1","limit":10,"filter":{"text":"jane"},"sort":[{"property":"name"}]},"0"]]}`,
 		string(data))
 }
 

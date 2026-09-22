@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -23,6 +24,32 @@ import (
 var ErrClosed = errors.New("eventsource: closed")
 
 const defaultMaxEventSize = 1 << 20 // 1 MiB
+
+type httpStatusError struct {
+	status     int
+	retryAfter time.Duration
+}
+
+func (e *httpStatusError) Error() string {
+	return fmt.Sprintf("invalid request, response code: %d", e.status)
+}
+
+func parseRetryAfter(v string) time.Duration {
+	if v == "" {
+		return 0
+	}
+	if sec, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && sec >= 0 {
+		return time.Duration(sec) * time.Second
+	}
+	if t, err := http.ParseTime(v); err == nil {
+		d := time.Until(t)
+		if d < 0 {
+			return 0
+		}
+		return d
+	}
+	return 0
+}
 
 // ReconnectOptions controls optional EventSource auto-reconnect.
 type ReconnectOptions struct {
@@ -59,7 +86,8 @@ type EventSource struct {
 	Handler func(*jmap.StateChange)
 
 	// OnPing is called when the server sends an event: ping frame.
-	OnPing func()
+	// interval is the JSON "interval" field (seconds); raw is the data payload.
+	OnPing func(interval uint64, raw []byte)
 
 	// OnCalendarAlert is called for SSE event: calendarAlert with a decoded
 	// CalendarAlert object (draft-ietf-jmap-calendars §6.4).
@@ -100,6 +128,15 @@ func (e *EventSource) httpClient() *http.Client {
 	return e.Client.HTTPClient()
 }
 
+// streamClient clones the HTTP client with Timeout 0 so a long-lived
+// EventSource GET is not cut off by the client's request timeout.
+func (e *EventSource) streamClient() *http.Client {
+	hc := e.httpClient()
+	clone := *hc
+	clone.Timeout = 0
+	return &clone
+}
+
 func (e *EventSource) maxEventSize() int {
 	if e.MaxEventSize > 0 {
 		return e.MaxEventSize
@@ -109,9 +146,16 @@ func (e *EventSource) maxEventSize() int {
 
 // Connect to the server
 func (e *EventSource) connect(ctx context.Context) error {
-	if e.Client == nil || e.Client.Session == nil {
+	if e.Client == nil {
 		return fmt.Errorf("eventsource: session not loaded")
 	}
+	e.Client.Lock()
+	if e.Client.Session == nil {
+		e.Client.Unlock()
+		return fmt.Errorf("eventsource: session not loaded")
+	}
+	tmpl := e.Client.Session.EventSourceURL
+	e.Client.Unlock()
 
 	if len(e.Events) == 0 {
 		e.Events = []jmap.EventType{jmap.AllEvents}
@@ -127,7 +171,6 @@ func (e *EventSource) connect(ctx context.Context) error {
 	}
 	ping := fmt.Sprintf("%d", e.Ping)
 
-	tmpl := e.Client.Session.EventSourceURL
 	expanded := jmap.ExpandURITemplateLevel1(tmpl, map[string]string{
 		"types":      typeStr,
 		"closeafter": closeAfter,
@@ -155,13 +198,26 @@ func (e *EventSource) connect(ctx context.Context) error {
 		req.Header.Set("Last-Event-ID", e.LastEventID)
 	}
 
-	resp, err := e.httpClient().Do(req)
+	resp, err := e.streamClient().Do(req)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != 200 {
+		var ra time.Duration
+		if resp.StatusCode == http.StatusTooManyRequests {
+			ra = parseRetryAfter(resp.Header.Get("Retry-After"))
+		}
 		resp.Body.Close()
-		return fmt.Errorf("invalid request, response code: %d", resp.StatusCode)
+		return &httpStatusError{status: resp.StatusCode, retryAfter: ra}
+	}
+	if err := jmap.ResponseOriginOK(u.String(), resp); err != nil {
+		resp.Body.Close()
+		return err
+	}
+	mt, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if err != nil || mt != "text/event-stream" {
+		resp.Body.Close()
+		return fmt.Errorf("eventsource: unexpected content type %q", resp.Header.Get("Content-Type"))
 	}
 
 	e.mu.Lock()
@@ -214,13 +270,17 @@ func (e *EventSource) Listen(ctx context.Context) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
+			var se *httpStatusError
+			if errors.As(err, &se) && se.status >= 400 && se.status <= 499 && se.status != http.StatusTooManyRequests {
+				return err
+			}
 			if e.Reconnect == nil {
 				return err
 			}
 			if e.Reconnect.OnDisconnect != nil {
 				e.Reconnect.OnDisconnect(err)
 			}
-			if err := e.waitBackoff(ctx, backoff); err != nil {
+			if err := e.waitBackoff(ctx, e.delayAfterConnectError(err, backoff)); err != nil {
 				return err
 			}
 			backoff = nextBackoff(backoff, maxBackoff)
@@ -251,7 +311,7 @@ func (e *EventSource) Listen(ctx context.Context) error {
 			if e.Reconnect.OnDisconnect != nil {
 				e.Reconnect.OnDisconnect(err)
 			}
-			if waitErr := e.waitBackoff(ctx, backoff); waitErr != nil {
+			if waitErr := e.waitBackoff(ctx, e.reconnectDelay(backoff)); waitErr != nil {
 				return waitErr
 			}
 			backoff = nextBackoff(backoff, maxBackoff)
@@ -259,6 +319,9 @@ func (e *EventSource) Listen(ctx context.Context) error {
 		}
 
 		// Clean EOF
+		if e.CloseAfterState {
+			return nil
+		}
 		if e.Reconnect == nil {
 			if err == nil {
 				return io.EOF
@@ -268,7 +331,7 @@ func (e *EventSource) Listen(ctx context.Context) error {
 		if e.Reconnect.OnDisconnect != nil {
 			e.Reconnect.OnDisconnect(io.EOF)
 		}
-		if waitErr := e.waitBackoff(ctx, backoff); waitErr != nil {
+		if waitErr := e.waitBackoff(ctx, e.reconnectDelay(backoff)); waitErr != nil {
 			return waitErr
 		}
 		backoff = nextBackoff(backoff, maxBackoff)
@@ -286,13 +349,35 @@ func nextBackoff(cur, max time.Duration) time.Duration {
 	return next
 }
 
+func (e *EventSource) reconnectDelay(d time.Duration) time.Duration {
+	if e.Retry > 0 {
+		d = e.Retry
+		e.Retry = 0
+	} else if d <= 0 {
+		d = time.Second
+	}
+	if e.Reconnect != nil {
+		if min := e.Reconnect.minBackoff(); d < min {
+			d = min
+		}
+		if max := e.Reconnect.maxBackoff(); max > 0 && d > max {
+			d = max
+		}
+	}
+	return d
+}
+
+func (e *EventSource) delayAfterConnectError(err error, backoff time.Duration) time.Duration {
+	var se *httpStatusError
+	if errors.As(err, &se) && se.status == http.StatusTooManyRequests && se.retryAfter > 0 {
+		return se.retryAfter
+	}
+	return e.reconnectDelay(backoff)
+}
+
 func (e *EventSource) waitBackoff(ctx context.Context, d time.Duration) error {
 	if d <= 0 {
 		d = time.Second
-	}
-	// Prefer Retry from server if set and larger.
-	if e.Retry > d {
-		d = e.Retry
 	}
 	t := time.NewTimer(d)
 	defer t.Stop()
@@ -359,8 +444,14 @@ func (e *EventSource) readStream(ctx context.Context) error {
 		case "", "message":
 			// ignore unnamed / generic
 		case "ping":
+			var p struct {
+				Interval uint64 `json:"interval"`
+			}
+			if err := jsonv2.Unmarshal(data, &p); err != nil {
+				return err
+			}
 			if e.OnPing != nil {
-				e.OnPing()
+				e.OnPing(p.Interval, data)
 			}
 		case "state":
 			if e.Handler != nil && len(data) > 0 {
@@ -414,6 +505,9 @@ func (e *EventSource) readStream(ctx context.Context) error {
 					dataBuf.WriteByte('\n')
 				}
 				dataBuf.WriteString(value)
+				if dataBuf.Len() > e.maxEventSize() {
+					return fmt.Errorf("eventsource: event exceeds max size")
+				}
 			case "id":
 				if !strings.ContainsRune(value, '\x00') {
 					id = value
@@ -433,6 +527,9 @@ func (e *EventSource) readStream(ctx context.Context) error {
 				if dataBuf.Len() > 0 {
 					dataBuf.WriteByte('\n')
 				}
+				if dataBuf.Len() > e.maxEventSize() {
+					return fmt.Errorf("eventsource: event exceeds max size")
+				}
 			case "id":
 				id = ""
 				hasID = true
@@ -451,6 +548,11 @@ func (e *EventSource) readStream(ctx context.Context) error {
 	}
 	if err := scanner.Err(); err != nil {
 		return err
+	}
+	if dataBuf.Len() > 0 || eventType != "" {
+		if err := dispatch(); err != nil {
+			return err
+		}
 	}
 	return io.EOF
 }

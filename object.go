@@ -6,6 +6,13 @@ type Object interface {
 	Requires() []URI
 }
 
+// Creatable is an Object whose /set method permits create and update
+// (RFC 8620 §5.3). Destroy-only types must not implement JMAPCreatable.
+type Creatable interface {
+	Object
+	JMAPCreatable()
+}
+
 // MethodFlags selects which standard methods to register for an Object.
 type MethodFlags uint64
 

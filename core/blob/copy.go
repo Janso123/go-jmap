@@ -23,9 +23,9 @@ type CopyResponse struct {
 
 	Account jmap.ID `json:"accountId,omitzero"`
 
-	Copied map[jmap.ID]jmap.ID `json:"copied,omitzero"`
+	Copied jmap.Optional[map[jmap.ID]jmap.ID] `json:"copied,omitzero"`
 
-	NotCopied map[jmap.ID]*jmap.SetError `json:"notCopied,omitzero"`
+	NotCopied jmap.Optional[map[jmap.ID]*jmap.SetError] `json:"notCopied,omitzero"`
 }
 
 func newCopyResponse() jmap.MethodResponse { return &CopyResponse{} }

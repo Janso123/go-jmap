@@ -36,9 +36,11 @@ type Quota struct {
 
 	ResourceType string `json:"resourceType,omitzero"`
 
-	Used uint64 `json:"used,omitzero"`
+	// Used is a required read-only UnsignedInt. Zero stays on the wire.
+	Used jmap.UnsignedInt `json:"used"`
 
-	HardLimit uint64 `json:"hardLimit,omitzero"`
+	// HardLimit is a required read-only UnsignedInt. Zero stays on the wire.
+	HardLimit jmap.UnsignedInt `json:"hardLimit"`
 
 	Scope string `json:"scope,omitzero"`
 
@@ -46,11 +48,13 @@ type Quota struct {
 
 	Types []string `json:"types,omitzero"`
 
-	WarnLimit *uint64 `json:"warnLimit,omitzero"`
+	// WarnLimit and SoftLimit are UnsignedInt|null.
+	// Unset omits the key; Null remarshals as JSON null; Some(0) is zero.
+	WarnLimit jmap.Optional[jmap.UnsignedInt] `json:"warnLimit,omitzero"`
 
-	SoftLimit *uint64 `json:"softLimit,omitzero"`
+	SoftLimit jmap.Optional[jmap.UnsignedInt] `json:"softLimit,omitzero"`
 
-	Description string `json:"description,omitzero"`
+	Description jmap.Optional[string] `json:"description,omitzero"`
 }
 
 func (Quota) JMAPType() string { return "Quota" }

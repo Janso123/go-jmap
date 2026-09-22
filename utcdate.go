@@ -3,6 +3,8 @@ package jmap
 import (
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -22,6 +24,12 @@ func (d *UTCDate) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	var s string
 	if err := jsonv2.UnmarshalDecode(dec, &s); err != nil {
 		return err
+	}
+	if strings.ContainsAny(s, "tz") {
+		return fmt.Errorf("jmap: UTCDate %q uses lowercase time letters", s)
+	}
+	if !strings.HasSuffix(s, "Z") {
+		return fmt.Errorf("jmap: UTCDate %q is not Z-terminated", s)
 	}
 	t, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {
@@ -47,6 +55,9 @@ func (d *Date) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	var s string
 	if err := jsonv2.UnmarshalDecode(dec, &s); err != nil {
 		return err
+	}
+	if strings.ContainsAny(s, "tz") {
+		return fmt.Errorf("jmap: Date %q uses lowercase time letters", s)
 	}
 	t, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {

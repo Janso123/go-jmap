@@ -3,6 +3,8 @@ package jmap
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -62,32 +64,74 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
-// WithTrustedHosts restricts HTTP redirects to the given hosts (req.URL.Host).
-// Redirect chains longer than 5 are rejected.
+// WithTrustedHosts restricts HTTP redirects to the given hosts or origins.
+// A host (or host:port) matches only when the redirect keeps the original
+// request scheme and that host:port. A full origin (scheme://host[:port])
+// matches that origin. Scheme downgrades (https→http) are rejected.
+// Redirect chains longer than 5 are rejected. With no list, redirects must
+// stay on the original origin (scheme+host+port).
 func WithTrustedHosts(hosts ...string) Option {
 	return func(c *Client) {
-		allowed := map[string]struct{}{}
-		for _, h := range hosts {
-			allowed[h] = struct{}{}
+		c.trustedHosts = append([]string(nil), hosts...)
+		c.policyClient = nil
+	}
+}
+
+func enforceRedirectOrigin(req *http.Request, via []*http.Request, allowed []string) error {
+	host := ""
+	if req != nil && req.URL != nil {
+		host = req.URL.Host
+	}
+	if len(via) >= 5 {
+		return fmt.Errorf("stopped after 5 redirects")
+	}
+	if req == nil || req.URL == nil || len(via) == 0 || via[0] == nil || via[0].URL == nil {
+		return fmt.Errorf("redirect to untrusted host %q", host)
+	}
+	got := originOfURL(req.URL)
+	orig := originOfURL(via[0].URL)
+	if got == "" || orig == "" || schemeDowngrade(via[0].URL.Scheme, req.URL.Scheme) {
+		return fmt.Errorf("redirect to untrusted host %q", host)
+	}
+	if len(allowed) == 0 {
+		if got != orig {
+			return fmt.Errorf("redirect to untrusted host %q", host)
 		}
-		hc := c.httpClient()
-		if hc == http.DefaultClient {
-			hc = &http.Client{}
-			c.HttpClient = hc
-		}
-		hc.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return fmt.Errorf("stopped after 5 redirects")
-			}
-			if _, ok := allowed[req.URL.Host]; !ok {
-				return fmt.Errorf("redirect to untrusted host %q", req.URL.Host)
-			}
+		return nil
+	}
+	for _, entry := range allowed {
+		if allowedEntryOrigin(entry, via[0].URL) == got {
 			return nil
 		}
 	}
+	return fmt.Errorf("redirect to untrusted host %q", host)
+}
+
+func schemeDowngrade(from, to string) bool {
+	from, to = strings.ToLower(from), strings.ToLower(to)
+	return (from == "https" || from == "wss") && (to == "http" || to == "ws")
+}
+
+func allowedEntryOrigin(entry string, orig *url.URL) string {
+	if strings.Contains(entry, "://") {
+		return originOf(entry)
+	}
+	if orig == nil || orig.Scheme == "" {
+		return ""
+	}
+	return originOfURL(&url.URL{Scheme: orig.Scheme, Host: entry})
 }
 
 // WithUserAgent overrides the default User-Agent header.
 func WithUserAgent(ua string) Option {
 	return func(c *Client) { c.UserAgent = ua }
+}
+
+// WithMaxResponseBytes limits each buffered JSON response to n bytes.
+// A positive n replaces the default cap. When n is zero or this option is
+// omitted, the cap is max(32<<20, the session core maxSizeRequest when that
+// capability is present). Using maxSizeRequest as a response limit is a
+// heuristic (RFC 8620 §2 defines the value for requests).
+func WithMaxResponseBytes(n int64) Option {
+	return func(c *Client) { c.maxResponseBytes = n }
 }

@@ -1,10 +1,12 @@
 package jmap
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var sessionBlob = `{
@@ -70,11 +72,18 @@ var sessionBlob = `{
   "state": "75128aab4b1b"
 }`
 
+func TestSessionAccountIDFromMapKey(t *testing.T) {
+	var s Session
+	err := jsonv2.Unmarshal([]byte(`{"capabilities":{},"accounts":{"A1":{"name":"a","isPersonal":true,"isReadOnly":false,"accountCapabilities":{}}},"primaryAccounts":{},"username":"u","apiUrl":"https://x/jmap","downloadUrl":"https://x/d/{accountId}/{blobId}/{name}?type={type}","uploadUrl":"https://x/u/{accountId}","eventSourceUrl":"https://x/e","state":"s"}`), &s)
+	require.NoError(t, err)
+	require.Equal(t, "A1", s.Accounts["A1"].ID)
+}
+
 func TestSessionUnmarshal(t *testing.T) {
 	RegisterCapability(&testCapability{})
 	assert := assert.New(t)
 	s := &Session{}
-	err := json.Unmarshal([]byte(sessionBlob), s)
+	err := jsonv2.Unmarshal([]byte(sessionBlob), s)
 	assert.NoError(err)
 
 	testCap := s.Capabilities["test:jmap:capability"].(*testCapability)
@@ -85,17 +94,17 @@ func TestSessionUnmarshal(t *testing.T) {
 func TestSessionMarshal(t *testing.T) {
 	assert := assert.New(t)
 	s := Session{}
-	err := json.Unmarshal([]byte(sessionBlob), &s)
+	err := jsonv2.Unmarshal([]byte(sessionBlob), &s)
 	assert.NoError(err)
 
-	blob, err := json.MarshalIndent(s, "", "  ")
+	blob, err := jsonv2.Marshal(s, jsontext.WithIndent("  "))
 	assert.NoError(err)
 
 	// We can't just compare []byte because order of fields may be different.
 	var original, remarshaled map[string]any
-	err = json.Unmarshal([]byte(sessionBlob), &original)
+	err = jsonv2.Unmarshal([]byte(sessionBlob), &original)
 	assert.NoError(err)
-	err = json.Unmarshal(blob, &remarshaled)
+	err = jsonv2.Unmarshal(blob, &remarshaled)
 	assert.NoError(err)
 
 	assert.Equal(original, remarshaled)

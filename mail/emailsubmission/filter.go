@@ -10,7 +10,7 @@ type FilterCondition struct {
 	IdentityIDs []jmap.ID     `json:"identityIds,omitzero"`
 	EmailIDs    []jmap.ID     `json:"emailIds,omitzero"`
 	ThreadIDs   []jmap.ID     `json:"threadIds,omitzero"`
-	UndoStatus  string        `json:"undoStatus,omitzero"`
+	UndoStatus  UndoStatus    `json:"undoStatus,omitzero"`
 	Before      *jmap.UTCDate `json:"before,omitzero"`
 	After       *jmap.UTCDate `json:"after,omitzero"`
 }

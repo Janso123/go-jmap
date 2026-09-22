@@ -1,7 +1,7 @@
 package thread_test
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/Janso123/go-jmap"
@@ -16,7 +16,7 @@ func TestThreadJSONRoundTrip(t *testing.T) {
 		EmailIDs: []jmap.ID{"e1", "e2", "e3"},
 	}
 
-	data, err := json.Marshal(th)
+	data, err := jsonv2.Marshal(th)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"id": "th1",
@@ -24,6 +24,6 @@ func TestThreadJSONRoundTrip(t *testing.T) {
 	}`, string(data))
 
 	var got thread.Thread
-	require.NoError(t, json.Unmarshal(data, &got))
+	require.NoError(t, jsonv2.Unmarshal(data, &got))
 	require.Equal(t, th, got)
 }

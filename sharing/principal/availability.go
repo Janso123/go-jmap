@@ -25,9 +25,9 @@ type BusyPeriod struct {
 
 	BusyStatus BusyStatus `json:"busyStatus,omitzero"`
 
-	Event *calendarevent.CalendarEvent `json:"event,omitzero"`
+	Event jmap.Optional[calendarevent.CalendarEvent] `json:"event,omitzero"`
 
-	AccountID *jmap.ID `json:"accountId,omitzero"`
+	AccountID jmap.Optional[jmap.ID] `json:"accountId,omitzero"`
 }
 
 // GetAvailability calculates scheduling availability for a principal.
@@ -41,9 +41,9 @@ type GetAvailability struct {
 
 	UTCEnd jscalendar.UTCDateTime `json:"utcEnd,omitzero"`
 
-	ShowDetails bool `json:"showDetails,omitzero"`
+	ShowDetails bool `json:"showDetails"`
 
-	EventProperties []string `json:"eventProperties,omitzero"`
+	EventProperties jmap.Optional[[]string] `json:"eventProperties,omitzero"`
 }
 
 func (m *GetAvailability) Name() string { return "Principal/getAvailability" }

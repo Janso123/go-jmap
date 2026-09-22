@@ -13,8 +13,6 @@ func init() {
 			jmap.MethodQueryChanges |
 			jmap.MethodSet,
 	)
-	// ShareNotification/changes includes updatedProperties; override kit factory.
-	jmap.RegisterMethod("ShareNotification/changes", func() jmap.MethodResponse { return &ChangesResponse{} })
 }
 
 const (
@@ -27,9 +25,9 @@ const (
 type Entity struct {
 	Name string `json:"name,omitzero"`
 
-	Email *string `json:"email,omitzero"`
+	Email jmap.Optional[string] `json:"email,omitzero"`
 
-	PrincipalID *jmap.ID `json:"principalId,omitzero"`
+	PrincipalID jmap.Optional[jmap.ID] `json:"principalId,omitzero"`
 }
 
 // ShareNotification records a change to a user's access rights on a shared object.
@@ -47,9 +45,9 @@ type ShareNotification struct {
 
 	ObjectID jmap.ID `json:"objectId,omitzero"`
 
-	OldRights map[string]bool `json:"oldRights,omitzero"`
+	OldRights jmap.Optional[map[string]bool] `json:"oldRights,omitzero"`
 
-	NewRights map[string]bool `json:"newRights,omitzero"`
+	NewRights jmap.Optional[map[string]bool] `json:"newRights,omitzero"`
 
 	Name string `json:"name,omitzero"`
 }

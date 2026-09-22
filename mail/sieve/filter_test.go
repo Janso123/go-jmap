@@ -1,7 +1,7 @@
 package sieve
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +12,7 @@ import (
 func boolPtr(v bool) *bool { return new(v) }
 
 func TestFilterConditionMarshal(t *testing.T) {
-	data, err := json.Marshal(&FilterCondition{
+	data, err := jsonv2.Marshal(&FilterCondition{
 		Name:     "vacation",
 		IsActive: new(true),
 	})
@@ -21,7 +21,7 @@ func TestFilterConditionMarshal(t *testing.T) {
 }
 
 func TestFilterOperatorMarshal(t *testing.T) {
-	data, err := json.Marshal(And(
+	data, err := jsonv2.Marshal(And(
 		&FilterCondition{Name: "vacation"},
 		&FilterCondition{IsActive: new(true)},
 	))
@@ -32,7 +32,7 @@ func TestFilterOperatorMarshal(t *testing.T) {
 }
 
 func TestFilterConditionMarshalInactive(t *testing.T) {
-	data, err := json.Marshal(&FilterCondition{
+	data, err := jsonv2.Marshal(&FilterCondition{
 		IsActive: new(false),
 	})
 	require.NoError(t, err)

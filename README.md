@@ -2,17 +2,17 @@
 
 A JMAP **client** library for Go: typed methods, session/HTTPS transport, EventSource, and RFC 8887 WebSocket.
 
-**Module:** [`github.com/Janso123/go-jmap`](https://github.com/Janso123/go-jmap) · **Tag:** `v1.0.0-alpha.2` · **Go:** 1.27+ (`toolchain go1.27.1`)
+**Module:** [`github.com/Janso123/go-jmap`](https://github.com/Janso123/go-jmap) · **Tag:** `v1.0.0-rc.1` · **Go:** 1.27.1
 
-Alpha: APIs may still change before a stable `v1.0.0`. Not a drop-in for older rockorager import paths.
+Release candidate: APIs may still change before a stable `v1.0.0`. Not a drop-in for older rockorager import paths.
 
 ## Install
 
 ```bash
-go get github.com/Janso123/go-jmap@v1.0.0-alpha.2
+go get github.com/Janso123/go-jmap@v1.0.0-rc.1
 ```
 
-Requires Go **1.27+** (pulled in by `github.com/coder/websocket` v1.8.x).
+Requires Go **1.27.1** (`go 1.27.1` in `go.mod`; `github.com/coder/websocket` v1.8.x).
 
 ## Quick start
 
@@ -78,7 +78,9 @@ func main() {
 	for _, inv := range resp.Responses {
 		if r, ok := inv.Args.(*email.GetResponse); ok {
 			for _, eml := range r.List {
-				fmt.Println("Subject:", eml.Subject)
+				if subject, ok := eml.Subject.Value(); ok {
+					fmt.Println("Subject:", subject)
+				}
 			}
 		}
 	}
@@ -152,7 +154,7 @@ Import `contacts/jscontact` and `calendar/jscalendar` when building typed Card/E
 
 Mail packages (`mail/email`, `mail/mailbox`, …) register via their normal imports — no extra blank import needed for core Mail.
 
-## API highlights (v1 alpha)
+## API highlights (v1 release candidate)
 
 | Area | What you get |
 |------|----------------|
@@ -166,12 +168,12 @@ Mail packages (`mail/email`, `mail/mailbox`, …) register via their normal impo
 | **Session** | `Do` marks stale on `sessionState` mismatch — call `SessionStale()` / `RefreshSession(ctx)` yourself |
 | **Push** | EventSource (`core/push`) and WebSocket (`core/push/websocket`) with push enable/disable and `pushState` |
 
-### Alpha caveats
+### Release candidate caveats
 
 | Caveat | Detail |
 |--------|--------|
 | Auth option order | `WithBearer` / `WithBasic` wrap the current `Transport` and keep Timeout, CheckRedirect, and Jar. Credentials are sent only to the session origin plus `apiUrl`/`uploadUrl`/`downloadUrl`/`eventSourceUrl` (and WebSocket URL after `AllowAuthOrigin`). `WithHTTPClient` after auth replaces the whole client (including auth). Timeout / TrustedHosts compose with Bearer/Basic. |
-| Bool `false` on wire | Prefer `*bool` + `omitzero` (`nil` omit, `&false` send) for fields like `isSubscribed` / `isEnabled` |
+| Null, zero, and false | `T\|null` is `jmap.Optional[T]` with `omitzero`: an unset value omits the key, `Null()` is JSON null, and `Some(0)` / `Some(false)` / `Some("")` stay on the wire. A nil `*bool` or `*UnsignedInt` omits the key; `new(false)` and `new(jmap.UnsignedInt(0))` send zero. `Bool`, `UintPtr`, and `IDPtr` are `//go:fix inline` wrappers around `new`. |
 | No H2 CONNECT | Use HTTP/1.1 WebSocket upgrade |
 | Calendars | Draft-pinned; stays **Partial** until RFCs ship (see below) |
 | No fluent one-shots | Typed structs + `Do` / `Call` / `Conn.Do` — not a high-level mail sync layer |
@@ -237,11 +239,11 @@ CI runs the same race tests on pushes/PRs to `main`.
 
 ## Releasing
 
-Push a version tag (`vX.Y.Z` or prerelease like `v1.0.0-alpha.1`). The [release workflow](.github/workflows/release.yml) runs tests, then creates a GitHub Release with auto-generated notes (tags containing `alpha` / `beta` / `rc` are marked prerelease).
+Push a version tag (`vX.Y.Z` or prerelease like `v1.0.0-rc.1`). The [release workflow](.github/workflows/release.yml) runs tests, then creates a GitHub Release with auto-generated notes (tags containing `alpha` / `beta` / `rc` are marked prerelease).
 
 ```bash
-git tag v1.0.0-alpha.2
-git push origin v1.0.0-alpha.2
+git tag v1.0.0-rc.1
+git push origin v1.0.0-rc.1
 ```
 
 ## License
