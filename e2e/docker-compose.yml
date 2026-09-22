@@ -15,5 +15,14 @@ services:
       timeout: 3s
       retries: 30
       start_period: 5s
+  cli:
+    image: ghcr.io/stalwartlabs/cli:1.0.12
+    profiles: ["cli"]
+    network_mode: "service:stalwart"
+    environment:
+      STALWART_URL: http://127.0.0.1:8080
+      STALWART_USER: admin
+      STALWART_PASSWORD: e2e-admin-pass
+    entrypoint: ["stalwart-cli"]
 volumes:
   stalwart-data:
