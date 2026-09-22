@@ -309,7 +309,7 @@ func TestContacts(t *testing.T) {
 		copiedID = created.ID
 		return "id=" + string(copiedID), nil
 	})
-	if copied {
+	if copied || sc.failed {
 		call[*contactcard.GetResponse](t, sc, step{
 			RFC: "RFC 9610", Method: "ContactCard/get", Account: bob.Name, Request: "id=" + string(copiedID),
 		}, bob.Client, []jmap.URI{contacts.URI}, false, &contactcard.Get{
@@ -319,7 +319,10 @@ func TestContacts(t *testing.T) {
 			if resp == nil || len(resp.List) == 0 || resp.List[0].ID != copiedID {
 				return "", errString("copied card missing")
 			}
-			return "id=" + string(copiedID), nil
+			if resp.List[0].Name == nil || resp.List[0].Name.Full != "E2E Person 02" {
+				return "", errString("full name mismatch")
+			}
+			return "full=" + resp.List[0].Name.Full, nil
 		})
 	}
 
