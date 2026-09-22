@@ -41,6 +41,7 @@ func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
 		_ = rep.write(reportPath, started)
+		fmt.Fprintf(os.Stderr, "e2e report: %s\n", reportPath)
 		_ = compose("down", "-v")
 		os.Exit(code)
 	}()
