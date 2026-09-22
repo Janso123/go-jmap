@@ -200,33 +200,25 @@ func TestBlob(t *testing.T) {
 		}
 	}
 
-	copiedID, notFound := copyBlobFromAlice(t, sc, aliceID, bobID, source, true)
-	if notFound && !sc.failed {
-		call[*mailbox.SetResponse](t, sc, step{
-			RFC: "RFC 8621", Method: "Mailbox/set", Account: alice.Name, Request: "shareWith bob mayReadItems",
-		}, alice.Client, []jmap.URI{mail.URI}, false, &mailbox.Set{
-			Account: aliceID,
-			Update: jmap.Some(map[jmap.ID]jmap.Patch{
-				inboxID: {
-					"shareWith": map[string]any{
-						string(bobID): map[string]bool{"mayReadItems": true},
-					},
+	call[*mailbox.SetResponse](t, sc, step{
+		RFC: "RFC 8621", Method: "Mailbox/set", Account: alice.Name, Request: "shareWith bob mayReadItems",
+	}, alice.Client, []jmap.URI{mail.URI}, false, &mailbox.Set{
+		Account: aliceID,
+		Update: jmap.Some(map[jmap.ID]jmap.Patch{
+			inboxID: {
+				"shareWith": map[string]any{
+					string(bobID): map[string]bool{"mayReadItems": true},
 				},
-			}),
-		}, func(resp *mailbox.SetResponse) (string, error) {
-			if err := rejectMailboxUpdate(resp, inboxID); err != nil {
-				return "", err
-			}
-			return "shared=" + string(bobID), nil
-		})
-		if !sc.failed {
-			copiedID, notFound = copyBlobFromAlice(t, sc, aliceID, bobID, source, false)
+			},
+		}),
+	}, func(resp *mailbox.SetResponse) (string, error) {
+		if err := rejectMailboxUpdate(resp, inboxID); err != nil {
+			return "", err
 		}
-	}
-	if notFound && !sc.failed {
-		sc.failed = true
-		t.Errorf("Blob Blob/copy: blobNotFound")
-	}
+		return "shared=" + string(bobID), nil
+	})
+
+	copiedID := copyBlobFromAlice(t, sc, aliceID, bobID, source)
 
 	bobGot, bobOK := downloadBlob(t, sc, step{
 		RFC: "RFC 8620", Method: "Blob/download", Account: bob.Name, Request: "blobId=" + string(copiedID),
@@ -241,7 +233,7 @@ func TestBlob(t *testing.T) {
 	}
 }
 
-func copyBlobFromAlice(t *testing.T, sc *scenario, from, to, source jmap.ID, recoverNotFound bool) (jmap.ID, bool) {
+func copyBlobFromAlice(t *testing.T, sc *scenario, from, to, source jmap.ID) jmap.ID {
 	t.Helper()
 	st := step{
 		RFC: "RFC 8620", Method: "Blob/copy", Account: bob.Name,
@@ -249,7 +241,7 @@ func copyBlobFromAlice(t *testing.T, sc *scenario, from, to, source jmap.ID, rec
 	}
 	if sc.failed {
 		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: "an earlier step failed", Result: kindNotRun})
-		return "", false
+		return ""
 	}
 	copyReq := blob.Copy{FromAccount: from, Account: to, IDs: []jmap.ID{source}}
 	var method jmap.Method = &copyReq
@@ -261,31 +253,20 @@ func copyBlobFromAlice(t *testing.T, sc *scenario, from, to, source jmap.ID, rec
 		sc.failed = true
 		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: err.Error(), Result: kindFail})
 		t.Errorf("%s %s: %v", sc.name, st.Method, err)
-		return "", false
-	}
-	if se, notFound := blobNotFound(resp, source); notFound {
-		msg := setErrorText(se)
-		if recoverNotFound {
-			rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: msg, Result: kindFail})
-			return "", true
-		}
-		sc.failed = true
-		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: msg, Result: kindFail})
-		t.Errorf("%s %s: %s", sc.name, st.Method, msg)
-		return "", true
+		return ""
 	}
 	if resp == nil {
 		sc.failed = true
 		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: "empty copy response", Result: kindFail})
 		t.Errorf("%s %s: empty copy response", sc.name, st.Method)
-		return "", false
+		return ""
 	}
 	if nc, hasNC := resp.NotCopied.Value(); hasNC && len(nc) > 0 {
 		msg := setErrorSummary(nc)
 		sc.failed = true
 		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: msg, Result: kindFail})
 		t.Errorf("%s %s: %s", sc.name, st.Method, msg)
-		return "", false
+		return ""
 	}
 	copied, hasCopied := resp.Copied.Value()
 	newID := copied[source]
@@ -293,25 +274,10 @@ func copyBlobFromAlice(t *testing.T, sc *scenario, from, to, source jmap.ID, rec
 		sc.failed = true
 		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: "copied id missing", Result: kindFail})
 		t.Errorf("%s %s: copied id missing", sc.name, st.Method)
-		return "", false
+		return ""
 	}
 	rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: "id=" + string(newID), Result: kindPass})
-	return newID, false
-}
-
-func blobNotFound(resp *blob.CopyResponse, id jmap.ID) (*jmap.SetError, bool) {
-	if resp == nil {
-		return nil, false
-	}
-	nc, ok := resp.NotCopied.Value()
-	if !ok {
-		return nil, false
-	}
-	se := nc[id]
-	if se == nil || se.Type != string(jmap.SetErrBlobNotFound) {
-		return nil, false
-	}
-	return se, true
+	return newID
 }
 
 func rejectMailboxUpdate(resp *mailbox.SetResponse, id jmap.ID) error {
