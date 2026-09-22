@@ -226,16 +226,28 @@ Published RFCs on jmap.io are **Done** for a client library except calendar draf
 |------|-------------|-------|
 | HTTP/2 Extended CONNECT (RFC 8887 §4.2) | Blocked | `DialH2Connect` → `ErrH2ConnectUnsupported`; needs [coder/websocket#4](https://github.com/coder/websocket/issues/4) |
 
-There are no live-server integration tests (Stalwart/Cyrus/Fastmail) in-tree yet.
-
 ## Tests
+
+Unit tests do not need a server:
 
 ```bash
 go test -race -count=1 ./...
 go test ./... -cover   # package statement coverage
 ```
 
-CI runs the same race tests on pushes/PRs to `main`.
+CI runs those race tests on pushes and pull requests to `main`. It does not start Docker.
+
+### Stalwart end-to-end
+
+`e2e/` is built only with `-tags e2e`. The test process starts `stalwartlabs/stalwart:v0.16` through Docker Compose, creates `alice@example.org` and `bob@example.org`, and exercises session, mail, contacts, calendar, blob, quota, and push. It then writes `e2e/report.md` and removes the container. `go test ./...` without the tag does not start Docker.
+
+Docker is required. The suite binds `127.0.0.1:18080` and is not part of CI.
+
+```bash
+go test -tags e2e -count=1 -timeout 10m -v ./e2e/
+```
+
+`-v` prints `e2e report: e2e/report.md` after the journal is written. The report is gitignored.
 
 ## Releasing
 
