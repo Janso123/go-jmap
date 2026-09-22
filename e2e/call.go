@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Janso123/go-jmap"
+	"github.com/Janso123/go-jmap/core"
 )
 
 type account struct {
@@ -38,6 +39,14 @@ type step struct {
 func hasCap(c *jmap.Client, uri jmap.URI) bool {
 	_, ok := c.Session.Capabilities[uri]
 	return ok
+}
+
+func maxInSet(c *jmap.Client) int {
+	coreCap, ok := c.Session.Capabilities[jmap.CoreURI].(*core.Core)
+	if !ok || coreCap.MaxObjectsInSet == 0 {
+		return 30
+	}
+	return int(coreCap.MaxObjectsInSet)
 }
 
 func call[T jmap.MethodResponse](t *testing.T, sc *scenario, st step, client *jmap.Client, caps []jmap.URI, allowUnknown bool, method jmap.Method, check func(T) (string, error)) (T, bool) {
