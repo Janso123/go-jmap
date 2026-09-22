@@ -76,6 +76,13 @@ func call[T jmap.MethodResponse](t *testing.T, sc *scenario, st step, client *jm
 	return got, true
 }
 
+func skipRest(t *testing.T, sc *scenario, steps []step, reason string) {
+	t.Helper()
+	for _, st := range steps {
+		rep.add(invocation{Scenario: sc.name, RFC: st.RFC, Method: st.Method, Account: st.Account, Request: st.Request, Response: reason, Result: kindSkip})
+	}
+}
+
 func joinComma(parts []string) string { return strings.Join(parts, ", ") }
 
 func errString(msg string) error { return errors.New(msg) }
