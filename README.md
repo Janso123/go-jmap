@@ -1,22 +1,33 @@
 # go-jmap
 
-A JMAP **client** library for Go: typed methods, session/HTTPS transport, EventSource, and RFC 8887 WebSocket.
+A JMAP client library for Go: typed methods, HTTPS, EventSource, and RFC 8887 WebSocket.
 
-**Module:** [`github.com/Janso123/go-jmap`](https://github.com/Janso123/go-jmap) · **Tag:** `v1.0.0-rc.1` · **Go:** 1.27.1
+Module: [`github.com/Janso123/go-jmap`](https://github.com/Janso123/go-jmap). Go 1.27.1.
 
-Release candidate: APIs may still change before a stable `v1.0.0`. Not a drop-in for older rockorager import paths.
+## Status: semi-stable release candidate
 
-## Install
+`v1.0.0-rc.1` is semi-stable. It is not `v1.0.0`.
+
+The client API for published JMAP RFCs is frozen for this candidate. A break before `v1.0.0` will be called out in the release notes, not slipped in.
+
+Still open before a stable release:
+
+- Calendars and JSCalendar follow pinned drafts, not RFCs.
+- HTTP/2 Extended CONNECT is unavailable. WebSocket uses the HTTP/1.1 upgrade.
+- There is no high-level mail sync layer. You send typed structs through `Do` or `Call`.
+- The Email type is large. Tests cover the wire shapes we rely on, not every field.
+
+This module path is `github.com/Janso123/go-jmap`. It is not a drop-in for `rockorager/go-jmap` or earlier import paths.
 
 ```bash
 go get github.com/Janso123/go-jmap@v1.0.0-rc.1
 ```
 
-Requires Go **1.27.1** (`go 1.27.1` in `go.mod`; `github.com/coder/websocket` v1.8.x).
+`github.com/coder/websocket` v1.8.x.
 
 ## Quick start
 
-### HTTPS (session + method calls)
+### HTTPS
 
 ```go
 package main
@@ -47,7 +58,6 @@ func main() {
 		panic(err)
 	}
 
-	// One-shot typed call
 	mboxResp, err := jmap.Call[*mailbox.GetResponse](ctx, client, &mailbox.Get{Account: id})
 	if err != nil {
 		panic(err)
@@ -56,7 +66,6 @@ func main() {
 		fmt.Println("Mailbox:", mbox.Name)
 	}
 
-	// Batch with result references
 	req := &jmap.Request{}
 	callID := req.Invoke(&email.Changes{
 		Account:    id,
@@ -87,9 +96,11 @@ func main() {
 }
 ```
 
-### WebSocket (RFC 8887)
+Call `RefreshSession` yourself when `SessionStale` is set. `Do` only marks the session stale.
 
-Requires a session that advertises `urn:ietf:params:jmap:websocket`.
+### WebSocket
+
+The session must advertise `urn:ietf:params:jmap:websocket`.
 
 ```go
 import (
@@ -121,13 +132,11 @@ _ = conn.EnablePush(nil, conn.PushState()) // nil dataTypes = all types
 resp, err := conn.Do(ctx, req) // same *jmap.Request as Client.Do
 ```
 
-Blobs stay on HTTPS (RFC 8887 §4). `maxConcurrentRequests` is enforced per WebSocket `Conn`; budget HTTPS + WS together if you multiplex.
+Blobs stay on HTTPS (RFC 8887 §4). `maxConcurrentRequests` applies per WebSocket `Conn`. `DialH2Connect` returns `ErrH2ConnectUnsupported`.
 
-HTTP/2 Extended CONNECT is **not** available (`DialH2Connect` returns `ErrH2ConnectUnsupported`).
+## Imports
 
-## Capability registration (blank imports)
-
-Packages register capabilities and method response types in `init()`. Blank-import what you use **before** `Client.Do` / `websocket.Conn.Do`:
+Blank-import a capability package before `Client.Do` or `Conn.Do`. Mail packages (`mail/email`, `mail/mailbox`, and the rest of core Mail) register through a normal import.
 
 ```go
 import (
@@ -150,120 +159,68 @@ import (
 )
 ```
 
-Import `contacts/jscontact` and `calendar/jscalendar` when building typed Card/Event values; they do not register JMAP methods.
+`contacts/jscontact` and `calendar/jscalendar` are typed Card and Event models. They do not register JMAP methods.
 
-Mail packages (`mail/email`, `mail/mailbox`, …) register via their normal imports — no extra blank import needed for core Mail.
+## API you can rely on
 
-## API highlights (v1 release candidate)
+- `jmap.Call[T](ctx, client, method)` returns a typed response or `*MethodError`.
+- `Get`, `Changes`, `Query`, `QueryChanges`, `Set`, and `Copy` are generic. Packages add the RFC fields.
+- `Response.ByCallID` and `jmap.As[T]` read results. An unknown method becomes `*UnknownResponse` and does not fail the whole response.
+- Filters compose with `jmap.And(...)`. Sort is `[]*jmap.Comparator`.
+- `jmap.Optional[T]` keeps null, zero, and false distinct. An unset value omits the key. `Null()` sends JSON null. `Some(0)`, `Some(false)`, and `Some("")` stay on the wire.
+- A nil `*bool` or `*UnsignedInt` omits the key. `new(false)` and `new(jmap.UnsignedInt(0))` send zero.
+- `*jmap.UTCDate` is always `Z`. `jmap.Date` keeps the RFC 3339 offset.
+- Unknown JSContact and JSCalendar properties land in `Extra`.
+- Authorization is sent only to the session origin and to `apiUrl`, `uploadUrl`, `downloadUrl`, `eventSourceUrl`, and the WebSocket URL after `AllowAuthOrigin`.
+- `WithBearer` and `WithBasic` wrap the current transport. `WithHTTPClient` after those options replaces the whole client, including auth.
 
-| Area | What you get |
-|------|----------------|
-| **Generic method kit** | `Get` / `Changes` / `Query` / `QueryChanges` / `Set` / `Copy` parameterized on object types; thin packages embed and add RFC fields |
-| **One-shot** | `jmap.Call[T](ctx, client, method)` — typed response or `*MethodError` |
-| **Responses** | `Response.ByCallID`, `jmap.As[T]`; unknown methods → `*UnknownResponse` (does not fail the whole response) |
-| **Filters / sort** | `jmap.And(email.InMailbox(...))`; domain `FilterCondition` implements `jmap.Filter`; sort is `[]*jmap.Comparator` |
-| **JSContact / JSCalendar** | Unknown properties in public `Extra map[string]jsontext.Value` (`json:",embed"`); json/v2 |
-| **UTCDate / Date** | RFC 8620 §1.4: `*jmap.UTCDate` always `Z`; `jmap.Date` is RFC 3339 date-time with offset preserved |
-| **Transport** | Context on all I/O; origin-scoped `Authorization`; RFC 6570 L1 URI templates; `problem+json` → `RequestError`; non-JSON HTTP → `HTTPError`; blob upload/download; Discover (SRV + `.well-known`); `WithTrustedHosts`, `WithTimeout` |
-| **Session** | `Do` marks stale on `sessionState` mismatch — call `SessionStale()` / `RefreshSession(ctx)` yourself |
-| **Push** | EventSource (`core/push`) and WebSocket (`core/push/websocket`) with push enable/disable and `pushState` |
+## Specifications
 
-### Release candidate caveats
+Landscape: [jmap.io](https://jmap.io/spec.html).
 
-| Caveat | Detail |
-|--------|--------|
-| Auth option order | `WithBearer` / `WithBasic` wrap the current `Transport` and keep Timeout, CheckRedirect, and Jar. Credentials are sent only to the session origin plus `apiUrl`/`uploadUrl`/`downloadUrl`/`eventSourceUrl` (and WebSocket URL after `AllowAuthOrigin`). `WithHTTPClient` after auth replaces the whole client (including auth). Timeout / TrustedHosts compose with Bearer/Basic. |
-| Null, zero, and false | `T\|null` is `jmap.Optional[T]` with `omitzero`: an unset value omits the key, `Null()` is JSON null, and `Some(0)` / `Some(false)` / `Some("")` stay on the wire. A nil `*bool` or `*UnsignedInt` omits the key; `new(false)` and `new(jmap.UnsignedInt(0))` send zero. `Bool`, `UintPtr`, and `IDPtr` are `//go:fix inline` wrappers around `new`. |
-| No H2 CONNECT | Use HTTP/1.1 WebSocket upgrade |
-| Calendars | Draft-pinned; stays **Partial** until RFCs ship (see below) |
-| No fluent one-shots | Typed structs + `Do` / `Call` / `Conn.Do` — not a high-level mail sync layer |
+**Done** means a usable client surface. **Partial** means a pinned draft. **Blocked** means a known transport gap.
 
-## Spec coverage
+| Spec | Status | Note |
+|------|--------|------|
+| [RFC 8620](https://www.rfc-editor.org/rfc/rfc8620) Core | Done | Session, requests, errors, blobs, push, Discover |
+| [RFC 8887](https://www.rfc-editor.org/rfc/rfc8887) WebSocket | Done on HTTP/1.1 | H2 Extended CONNECT is blocked; see below |
+| [RFC 9749](https://www.rfc-editor.org/rfc/rfc9749) VAPID | Done | Capability and `applicationServerKey` |
+| [RFC 9670](https://www.rfc-editor.org/rfc/rfc9670) Sharing | Done | Principal and ShareNotification. Set is destroy-only |
+| [RFC 9425](https://www.rfc-editor.org/rfc/rfc9425) Quotas | Done | get, changes, query, queryChanges |
+| [RFC 9404](https://www.rfc-editor.org/rfc/rfc9404) Blob Management | Done | upload, get, lookup, plus Core `Blob/copy` |
+| [RFC 8621](https://www.rfc-editor.org/rfc/rfc8621) Mail | Done | Types and methods. The Email surface is larger than the tests |
+| [RFC 9007](https://www.rfc-editor.org/rfc/rfc9007) MDN | Done | send, parse, `$mdnsent` |
+| [RFC 9219](https://www.rfc-editor.org/rfc/rfc9219) S/MIME verify | Done | Capability, fields, and filters |
+| [RFC 9661](https://www.rfc-editor.org/rfc/rfc9661) Sieve | Done | get, set, query, validate |
+| [RFC 9610](https://www.rfc-editor.org/rfc/rfc9610) Contacts | Done | AddressBook and ContactCard |
+| [RFC 9553](https://www.rfc-editor.org/rfc/rfc9553) JSContact | Done | Typed Card |
+| [Calendars draft 29](https://datatracker.ietf.org/doc/draft-ietf-jmap-calendars/29/) | Partial | Methods are implemented. Stays partial until the RFC |
+| [JSCalendar bis 20](https://datatracker.ietf.org/doc/html/draft-ietf-calext-jscalendarbis-20) | Partial | Typed Event core. Task and Group are not typed |
 
-Landscape: [jmap.io Specifications](https://jmap.io/spec.html).
-
-Two different measures:
-
-- **Spec status** — whether client types/methods for that RFC (or draft) are implemented and usable.
-- **Test coverage (approx)** — Go statement coverage from `go test ./… -cover` for the main package(s). High package % does not mean every RFC semantic is asserted; larger packages (especially `mail/email`) still leave implementation ahead of tests.
-
-**Spec status legend:** **Done** = usable client surface · **Partial** = draft-pinned or intentionally incomplete · **Blocked** = known gap (transport).
-
-Published RFCs on jmap.io are **Done** for a client library except calendar drafts (**Partial**) and H2 CONNECT (**Blocked**). Roughly the full published matrix is implemented; remaining gaps are drafts + one transport stub.
-
-### Core
-
-| Spec | Spec status | Test coverage (approx) | Notes |
-|------|-------------|------------------------|-------|
-| [RFC 8620](https://www.rfc-editor.org/rfc/rfc8620) Core | Done | root ~69%; `core` ~83%; EventSource ~80%; subscription ~67% | Session, Request/Response, errors, HTTPS blobs, `Blob/copy`, PushSubscription, EventSource, Discover |
-| [RFC 8887](https://www.rfc-editor.org/rfc/rfc8887) WebSocket | Done (H1) | `websocket` ~81% | H1 Upgrade via `coder/websocket`; H2 Extended CONNECT **Blocked** (stub) |
-| [RFC 9749](https://www.rfc-editor.org/rfc/rfc9749) VAPID | Done | `vapid` ~100% | Capability + `applicationServerKey` |
-| [RFC 9670](https://www.rfc-editor.org/rfc/rfc9670) Sharing | Done | sharing 62–100% | Principal + ShareNotification (set is destroy-only) |
-| [RFC 9425](https://www.rfc-editor.org/rfc/rfc9425) Quotas | Done | `quota` ~64% | get/changes/query/queryChanges |
-| [RFC 9404](https://www.rfc-editor.org/rfc/rfc9404) Blob Management | Done | `blob` ~70% | upload/get/lookup (+ Core `Blob/copy`) |
-
-### Mail
-
-| Spec | Spec status | Test coverage (approx) | Notes |
-|------|-------------|------------------------|-------|
-| [RFC 8621](https://www.rfc-editor.org/rfc/rfc8621) Mail | Done | `email` ~57%; mailbox ~58%; others ~67–100% | Types/methods present; filters/keywords/`header:*`/S/MIME/Import/Parse wire fixtures; large Email surface still incomplete |
-| [RFC 9007](https://www.rfc-editor.org/rfc/rfc9007) MDN | Done | `mdn` ~82% | send/parse; `$mdnsent` keyword |
-| [RFC 9219](https://www.rfc-editor.org/rfc/rfc9219) S/MIME verify | Done | (in `email`, ~57%) | Capability + Email SMIME fields/filters; `using` includes `smimeverify` when properties or filters need it |
-| [RFC 9661](https://www.rfc-editor.org/rfc/rfc9661) Sieve | Done | `sieve` ~88% | get/set/query/validate |
-
-### Contacts and calendars
-
-| Spec | Spec status | Test coverage (approx) | Notes |
-|------|-------------|------------------------|-------|
-| [RFC 9610](https://www.rfc-editor.org/rfc/rfc9610) Contacts | Done | addressbook ~86%; contactcard ~72% | AddressBook + ContactCard |
-| [RFC 9553](https://www.rfc-editor.org/rfc/rfc9553) JSContact | Done | `jscontact` ~55% | Typed Card model |
-| JMAP Calendars (draft) | Partial | calendar pkgs ~70–100% | Pinned [draft-ietf-jmap-calendars-29](https://datatracker.ietf.org/doc/draft-ietf-jmap-calendars/29/); methods complete; stays Partial until RFC |
-| JSCalendar 2.0 (draft) | Partial | `jscalendar` ~47% | Pinned [draft-ietf-calext-jscalendarbis-20](https://datatracker.ietf.org/doc/html/draft-ietf-calext-jscalendarbis-20); typed Event core including `priority`/`privacy`/`freeBusyStatus`; unknown keys in `Extra`; Task/Group not typed |
-
-### Blocked
-
-| Item | Spec status | Notes |
-|------|-------------|-------|
-| HTTP/2 Extended CONNECT (RFC 8887 §4.2) | Blocked | `DialH2Connect` → `ErrH2ConnectUnsupported`; needs [coder/websocket#4](https://github.com/coder/websocket/issues/4) |
+HTTP/2 Extended CONNECT (RFC 8887 §4.2) is blocked. `DialH2Connect` returns `ErrH2ConnectUnsupported` until [coder/websocket#4](https://github.com/coder/websocket/issues/4) lands.
 
 ## Tests
 
-Unit tests do not need a server:
+Unit tests need no server. CI runs them with `-race` on pushes to `main` and on pull requests.
 
 ```bash
 go test -race -count=1 ./...
-go test ./... -cover   # package statement coverage
 ```
 
-CI runs those race tests on pushes and pull requests to `main`. It does not start Docker.
-
-### Stalwart end-to-end
-
-`e2e/` is built only with `-tags e2e`. The test process starts `stalwartlabs/stalwart:v0.16` through Docker Compose, creates `alice@example.org` and `bob@example.org`, and exercises session, mail, contacts, calendar, blob, quota, and push. It then writes `e2e/report.md` and removes the container. `go test ./...` without the tag does not start Docker.
-
-Docker is required. The suite binds `127.0.0.1:18080`. The `e2e` job in [`.github/workflows/go.yml`](.github/workflows/go.yml) runs it on pushes to `main` and on pull requests. The unit-test job does not pass `-tags e2e` and does not start Docker.
+The Stalwart suite is behind `-tags e2e`. It starts `stalwartlabs/stalwart:v0.16` on `127.0.0.1:18080`, runs session, mail, contacts, calendar, blob, quota, and push, writes `e2e/report.md`, and removes the container. `go test ./...` does not start Docker. The report is gitignored.
 
 ```bash
 go test -tags e2e -count=1 -timeout 10m -v ./e2e/
 ```
 
-`-v` prints `e2e report: e2e/report.md` after the journal is written. The report is gitignored.
+The same suite runs in CI. A version tag also runs it and puts the report in the GitHub Release, collapsed under "Stalwart e2e (pass N, fail N)". The release is not published when that suite fails.
 
 ## Releasing
 
-Push a version tag (`vX.Y.Z` or prerelease like `v1.0.0-rc.1`). The [release workflow](.github/workflows/release.yml) runs tests, then creates a GitHub Release with auto-generated notes (tags containing `alpha` / `beta` / `rc` are marked prerelease).
-
-The release workflow also runs the Stalwart suite and appends `e2e/report.md` in a collapsed "Stalwart e2e (pass N, fail N)" section. The release is not published when that suite fails.
-
-```bash
-git tag v1.0.0-rc.1
-git push origin v1.0.0-rc.1
-```
+Push a `v*` tag. Tags containing `alpha`, `beta`, or `rc` are prereleases. See [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 ## License
 
-[MIT](LICENSE) — SPDX: `MIT`.
+[MIT](LICENSE).
 
 Copyright © 2019 Max Mazurov; Copyright © 2022 Tim Culverhouse; and subsequent contributors.
-
-See [LICENSE](LICENSE) for terms.
