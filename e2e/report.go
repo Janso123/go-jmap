@@ -29,16 +29,16 @@ type invocation struct {
 	Result   kind
 }
 
-var scenarioOrder = []string{"Sesja", "Poczta", "Kontakty", "Kalendarz", "Blob", "Quota", "Push"}
+var scenarioOrder = []string{"Session", "Mail", "Contacts", "Calendar", "Blob", "Quota", "Push"}
 
 var scenarioLead = map[string]string{
-	"Sesja":     "Alice i Bob pobierają sesję JMAP i wołają Core/echo.",
-	"Poczta":    "Alice czyta Inbox, tworzy wiadomość i wysyła drugą do Boba.",
-	"Kontakty":  "Alice zakłada książkę E2E z 30 kartami, poprawia jedną i kopiuje kartę do Boba.",
-	"Kalendarz": "Alice zakłada kalendarz E2E z 5 wydarzeniami, w tym jednym z Bobem.",
-	"Blob":      "Alice wgrywa tekst, podpina go do maila i kopiuje blob do Boba.",
-	"Quota":     "Alice odczytuje quota.",
-	"Push":      "Alice włącza push i tworzy wiadomość, aż przyjdzie StateChange.",
+	"Session":  "Alice and Bob fetch the JMAP session and call Core/echo.",
+	"Mail":     "Alice reads Inbox, creates a message, and sends a second one to Bob.",
+	"Contacts": "Alice creates an E2E address book with 30 cards, updates one, and copies a card to Bob.",
+	"Calendar": "Alice creates an E2E calendar with 5 events, including one with Bob.",
+	"Blob":     "Alice uploads text, attaches it to a message, and copies the blob to Bob.",
+	"Quota":    "Alice reads quota.",
+	"Push":     "Alice enables push and creates a message until a StateChange arrives.",
 }
 
 type journal struct {
@@ -70,13 +70,13 @@ func (j *journal) write(path string, started time.Time) error {
 		image = "stalwartlabs/stalwart:v0.16"
 	}
 	fmt.Fprintf(&b, "# go-jmap e2e\n\n")
-	fmt.Fprintf(&b, "- obraz: %s\n", image)
+	fmt.Fprintf(&b, "- image: %s\n", image)
 	fmt.Fprintf(&b, "- start: %s\n", started.UTC().Format(time.RFC3339))
-	fmt.Fprintf(&b, "- czas: %s\n", time.Since(started).Round(time.Second))
+	fmt.Fprintf(&b, "- elapsed: %s\n", time.Since(started).Round(time.Second))
 	fmt.Fprintf(&b, "- pass: %d\n- fail: %d\n- skip: %d\n- not-run: %d\n\n",
 		counts[kindPass], counts[kindFail], counts[kindSkip], counts[kindNotRun])
 	if j.harnessErr != "" {
-		fmt.Fprintf(&b, "Harness nie doszedł do scenariuszy: %s\n", j.harnessErr)
+		fmt.Fprintf(&b, "Harness stopped before scenarios: %s\n", j.harnessErr)
 		return os.WriteFile(path, []byte(b.String()), 0o644)
 	}
 	for _, name := range scenarioOrder {
@@ -108,13 +108,13 @@ func (j *journal) write(path string, started time.Time) error {
 		for _, bucket := range buckets {
 			fmt.Fprintf(&b, "### %s\n\n", bucket.method)
 			for n, in := range bucket.items {
-				fmt.Fprintf(&b, "#### Wywołanie %d\n\n", n+1)
-				fmt.Fprintf(&b, "- RFC: %s\n- konto: %s\n- żądanie: %s\n- odpowiedź: %s\n- wynik: %s\n\n",
+				fmt.Fprintf(&b, "#### Invocation %d\n\n", n+1)
+				fmt.Fprintf(&b, "- RFC: %s\n- account: %s\n- request: %s\n- response: %s\n- result: %s\n\n",
 					in.RFC, in.Account, in.Request, in.Response, in.Result)
 			}
 		}
 	}
-	fmt.Fprintf(&b, "## Indeks\n\n| RFC | Metoda | Scenariusz | Wynik |\n|-----|--------|------------|-------|\n")
+	fmt.Fprintf(&b, "## Index\n\n| RFC | Method | Scenario | Result |\n|-----|--------|----------|--------|\n")
 	for _, name := range scenarioOrder {
 		seen := map[string]kind{}
 		var order []string

@@ -12,9 +12,9 @@ import (
 
 func TestReportMarkdown(t *testing.T) {
 	j := &journal{}
-	j.add(invocation{Scenario: "Poczta", RFC: "RFC 8621", Method: "Email/query", Account: "alice", Request: "inMailbox inbox", Response: "ids=a", Result: kindPass})
-	j.add(invocation{Scenario: "Poczta", RFC: "RFC 8621", Method: "Email/query", Account: "bob", Request: "subject=hi", Response: "timeout", Result: kindFail})
-	j.add(invocation{Scenario: "Sesja", RFC: "RFC 8620", Method: "Core/echo", Account: "alice", Request: "ping=e2e", Response: "ping=e2e", Result: kindPass})
+	j.add(invocation{Scenario: "Mail", RFC: "RFC 8621", Method: "Email/query", Account: "alice", Request: "inMailbox inbox", Response: "ids=a", Result: kindPass})
+	j.add(invocation{Scenario: "Mail", RFC: "RFC 8621", Method: "Email/query", Account: "bob", Request: "subject=hi", Response: "timeout", Result: kindFail})
+	j.add(invocation{Scenario: "Session", RFC: "RFC 8620", Method: "Core/echo", Account: "alice", Request: "ping=e2e", Response: "ping=e2e", Result: kindPass})
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "report.md")
@@ -27,18 +27,18 @@ func TestReportMarkdown(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(body)
-	sesja := strings.Index(text, "## Sesja")
-	poczta := strings.Index(text, "## Poczta")
-	if sesja < 0 || poczta < 0 || sesja > poczta {
+	session := strings.Index(text, "## Session")
+	mail := strings.Index(text, "## Mail")
+	if session < 0 || mail < 0 || session > mail {
 		t.Fatalf("scenario order:\n%s", text)
 	}
 	if !strings.Contains(text, "pass: 1") || !strings.Contains(text, "fail: 1") {
 		t.Fatalf("counts:\n%s", text)
 	}
-	if !strings.Contains(text, "| RFC 8621 | Email/query | Poczta | fail |") {
+	if !strings.Contains(text, "| RFC 8621 | Email/query | Mail | fail |") {
 		t.Fatalf("index row:\n%s", text)
 	}
-	if !strings.Contains(text, "### Email/query") || !strings.Contains(text, "#### Wywołanie 1") || !strings.Contains(text, "#### Wywołanie 2") {
+	if !strings.Contains(text, "### Email/query") || !strings.Contains(text, "#### Invocation 1") || !strings.Contains(text, "#### Invocation 2") {
 		t.Fatalf("invocations:\n%s", text)
 	}
 }

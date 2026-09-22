@@ -1,0 +1,19 @@
+services:
+  stalwart:
+    image: stalwartlabs/stalwart:v0.16
+    environment:
+      STALWART_RECOVERY_ADMIN: admin:e2e-admin-pass
+      STALWART_PUBLIC_URL: http://127.0.0.1:18080
+    ports:
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - stalwart-data:/var/lib/stalwart
+      - ./config.json:/etc/stalwart/config.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo >/dev/tcp/127.0.0.1/8080'"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+volumes:
+  stalwart-data:
