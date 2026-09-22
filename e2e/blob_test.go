@@ -182,22 +182,12 @@ func TestBlob(t *testing.T) {
 		return "matched=" + strconv.Itoa(n), nil
 	})
 
-	var source jmap.ID
-	var sourceBytes string
 	textGot, textOK := downloadBlob(t, sc, step{
 		RFC: "RFC 8620", Method: "Blob/download", Account: alice.Name, Request: "part=" + string(textBlob),
-	}, alice.Client, aliceID, textBlob, "")
-	if textOK && string(textGot) == blobPayload {
-		source = textBlob
-		sourceBytes = string(textGot)
-	} else if textOK {
-		msgGot, msgOK := downloadBlob(t, sc, step{
-			RFC: "RFC 8620", Method: "Blob/download", Account: alice.Name, Request: "message=" + string(messageBlob),
-		}, alice.Client, aliceID, messageBlob, "")
-		if msgOK {
-			source = messageBlob
-			sourceBytes = string(msgGot)
-		}
+	}, alice.Client, aliceID, textBlob, blobPayload)
+	if textOK && string(textGot) != blobPayload {
+		sc.failed = true
+		t.Errorf("Blob Blob/download: got %q", textGot)
 	}
 
 	call[*mailbox.SetResponse](t, sc, step{
@@ -218,12 +208,12 @@ func TestBlob(t *testing.T) {
 		return "shared=" + string(bobID), nil
 	})
 
-	copiedID := copyBlobFromAlice(t, sc, aliceID, bobID, source)
+	copiedID := copyBlobFromAlice(t, sc, aliceID, bobID, textBlob)
 
 	bobGot, bobOK := downloadBlob(t, sc, step{
 		RFC: "RFC 8620", Method: "Blob/download", Account: bob.Name, Request: "blobId=" + string(copiedID),
-	}, bob.Client, bobID, copiedID, sourceBytes)
-	if bobOK && string(bobGot) != sourceBytes {
+	}, bob.Client, bobID, copiedID, blobPayload)
+	if bobOK && string(bobGot) != blobPayload {
 		sc.failed = true
 		t.Errorf("Blob Blob/download: got %q", bobGot)
 	}
