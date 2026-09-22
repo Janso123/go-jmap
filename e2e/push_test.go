@@ -5,6 +5,7 @@ package e2e
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -90,13 +91,19 @@ func TestPush(t *testing.T) {
 	}
 
 	stateStep := pushStateStep(transportRFC)
-	aliceID, ok := createPushDraft(t, sc, emailStep, pushSubject)
-	if !ok {
+	if !hasCap(alice.Client, mail.URI) {
+		skipRest(t, sc, []step{emailStep, stateStep}, "missing "+string(mail.URI))
+		return
+	}
+	aliceID, err := alice.Client.PrimaryAccount(mail.URI)
+	if err != nil {
+		skipRest(t, sc, []step{emailStep, stateStep}, err.Error())
+		return
+	}
+	if !createPushDraft(t, sc, emailStep, aliceID, pushSubject) {
 		if sc.failed {
 			notRunPush(sc, stateStep)
 			t.Fail()
-		} else {
-			skipRest(t, sc, []step{stateStep}, "missing "+string(mail.URI))
 		}
 		return
 	}
@@ -106,17 +113,12 @@ func TestPush(t *testing.T) {
 	}
 }
 
-func createPushDraft(t *testing.T, sc *scenario, st step, subject string) (jmap.ID, bool) {
+func createPushDraft(t *testing.T, sc *scenario, st step, aliceID jmap.ID, subject string) bool {
 	t.Helper()
-	aliceID, err := alice.Client.PrimaryAccount(mail.URI)
-	if err != nil {
-		failPush(t, sc, st, err.Error())
-		return "", false
-	}
 	inboxID, err := aliceInbox(alice.Client, aliceID)
 	if err != nil {
 		failPush(t, sc, st, err.Error())
-		return "", false
+		return false
 	}
 	_, ok := call[*email.SetResponse](t, sc, st, alice.Client, []jmap.URI{mail.URI}, false, &email.Set{
 		Account: aliceID,
@@ -130,7 +132,7 @@ func createPushDraft(t *testing.T, sc *scenario, st step, subject string) (jmap.
 		}
 		return "id=" + string(created.ID), nil
 	})
-	return aliceID, ok
+	return ok
 }
 
 func aliceInbox(client *jmap.Client, account jmap.ID) (jmap.ID, error) {
@@ -163,37 +165,52 @@ func waitPushEmail(t *testing.T, sc *scenario, st step, account jmap.ID, changes
 	for {
 		select {
 		case change := <-changes:
-			seen++
-			last = pushChangeSummary(change)
-			if token, ok := emailState(change, account); ok {
+			if token, ok := notePushChange(change, account, &seen, &last); ok {
 				recordPush(sc, st, "Email="+token, kindPass)
 				return
 			}
-		default:
-			select {
-			case change := <-changes:
-				seen++
-				last = pushChangeSummary(change)
-				if token, ok := emailState(change, account); ok {
-					recordPush(sc, st, "Email="+token, kindPass)
-					return
-				}
-			case err := <-listenErr:
-				if err == nil || errors.Is(err, context.Canceled) {
-					continue
-				}
-				failPush(t, sc, st, err.Error())
-				return
-			case <-timer.C:
-				sc.failed = true
-				recordPush(sc, st, "timeout", kindFail)
-				if seen == 0 {
-					t.Errorf("%s %s: timeout", sc.name, st.Method)
-				} else {
-					t.Errorf("%s %s: timeout (%d events, last %s)", sc.name, st.Method, seen, last)
-				}
+		case err := <-listenErr:
+			if token, ok := takeQueuedEmail(changes, account, &seen, &last); ok {
+				recordPush(sc, st, "Email="+token, kindPass)
 				return
 			}
+			if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) {
+				continue
+			}
+			failPush(t, sc, st, err.Error())
+			return
+		case <-timer.C:
+			if token, ok := takeQueuedEmail(changes, account, &seen, &last); ok {
+				recordPush(sc, st, "Email="+token, kindPass)
+				return
+			}
+			sc.failed = true
+			recordPush(sc, st, "timeout", kindFail)
+			if seen == 0 {
+				t.Errorf("%s %s: timeout", sc.name, st.Method)
+			} else {
+				t.Errorf("%s %s: timeout (%d events, last %s)", sc.name, st.Method, seen, last)
+			}
+			return
+		}
+	}
+}
+
+func notePushChange(change *jmap.StateChange, account jmap.ID, seen *int, last *string) (string, bool) {
+	*seen++
+	*last = pushChangeSummary(change)
+	return emailState(change, account)
+}
+
+func takeQueuedEmail(changes <-chan *jmap.StateChange, account jmap.ID, seen *int, last *string) (string, bool) {
+	for {
+		select {
+		case change := <-changes:
+			if token, ok := notePushChange(change, account, seen, last); ok {
+				return token, true
+			}
+		default:
+			return "", false
 		}
 	}
 }
