@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -599,6 +598,10 @@ func expandDownloadURL(tmpl, accountID, blobID, typ, name string) string {
 
 const maxJSONBody = 32 << 20
 
+// maxSessionJSONBody bounds how far a server-advertised maxSizeRequest can
+// raise the response cap. Use WithMaxResponseBytes to go beyond it.
+const maxSessionJSONBody = 256 << 20
+
 func (c *Client) readJSONBody(r io.Reader) ([]byte, error) {
 	limit := c.responseLimit()
 	data, err := io.ReadAll(io.LimitReader(r, limit+1))
@@ -611,7 +614,7 @@ func (c *Client) readJSONBody(r io.Reader) ([]byte, error) {
 	return data, nil
 }
 
-// responseLimit is max(32<<20, session maxSizeRequest) unless
+// responseLimit is max(32<<20, min(session maxSizeRequest, 256<<20)) unless
 // WithMaxResponseBytes set a positive cap. maxSizeRequest is a heuristic
 // (RFC 8620 §2 defines the value for requests).
 func (c *Client) responseLimit() int64 {
@@ -630,33 +633,16 @@ func (c *Client) responseLimit() int64 {
 	return limit
 }
 
-// sessionMaxSizeRequest reads Session.Capabilities[CoreURI].(*core.Core).MaxSizeRequest
-// when that capability is present. Package jmap cannot import core (cycle).
+// sessionMaxSizeRequest reads the decoded core capability's maxSizeRequest.
 func sessionMaxSizeRequest(s *Session) (int64, bool) {
-	if s == nil || s.Capabilities == nil {
+	if s == nil {
 		return 0, false
 	}
-	cap, ok := s.Capabilities[CoreURI]
-	if !ok || cap == nil {
+	core, ok := s.Capabilities[CoreURI].(*Core)
+	if !ok || core == nil || core.MaxSizeRequest == 0 {
 		return 0, false
 	}
-	v := reflect.ValueOf(cap)
-	if v.Kind() != reflect.Pointer || v.IsNil() {
-		return 0, false
-	}
-	elem := v.Elem()
-	if elem.Kind() != reflect.Struct {
-		return 0, false
-	}
-	t := elem.Type()
-	if t.Name() != "Core" || !strings.HasSuffix(t.PkgPath(), "/core") {
-		return 0, false
-	}
-	f := elem.FieldByName("MaxSizeRequest")
-	if !f.IsValid() || !f.CanUint() {
-		return 0, false
-	}
-	return int64(f.Uint()), true
+	return int64(min(core.MaxSizeRequest, maxSessionJSONBody)), true
 }
 
 // Download downloads binary data by its Blob ID from the server.

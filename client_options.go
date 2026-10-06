@@ -130,8 +130,9 @@ func WithUserAgent(ua string) Option {
 // WithMaxResponseBytes limits each buffered JSON response to n bytes.
 // A positive n replaces the default cap. When n is zero or this option is
 // omitted, the cap is max(32<<20, the session core maxSizeRequest when that
-// capability is present). Using maxSizeRequest as a response limit is a
-// heuristic (RFC 8620 §2 defines the value for requests).
+// capability is present), and maxSizeRequest can raise it to at most 256<<20.
+// Using maxSizeRequest as a response limit is a heuristic (RFC 8620 §2
+// defines the value for requests).
 func WithMaxResponseBytes(n int64) Option {
 	return func(c *Client) { c.maxResponseBytes = n }
 }

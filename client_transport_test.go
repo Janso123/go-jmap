@@ -12,7 +12,6 @@ import (
 	"encoding/json/jsontext"
 
 	"github.com/Janso123/go-jmap"
-	"github.com/Janso123/go-jmap/core"
 	"github.com/stretchr/testify/require"
 )
 
@@ -300,7 +299,7 @@ func TestDoAccepts40MiBWhenMaxSizeRequestIs50000000(t *testing.T) {
 				jmap.CoreURI: jsontext.Value(`{"maxSizeRequest":50000000}`),
 			},
 			Capabilities: map[jmap.URI]jmap.Capability{
-				jmap.CoreURI: &core.Core{MaxSizeRequest: 50000000},
+				jmap.CoreURI: &jmap.Core{MaxSizeRequest: 50000000},
 			},
 		},
 	}
